@@ -8,6 +8,7 @@ import VolunteerDashboard from "./pages/VolunteerDashboard";
 import VetDashboard from "./pages/VetDashboard";
 import ShelterDashboard from "./pages/ShelterDashboard";
 import ReportAnimal from "./pages/ReportAnimal";
+import TrackingPage from "./pages/TrackingPage";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -71,6 +72,14 @@ function App() {
   element={
     <ProtectedRoute allowedRoles={["user"]}>
       <ReportAnimal />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/tracking"
+  element={
+    <ProtectedRoute allowedRoles={["user"]}>
+      <TrackingPage />
     </ProtectedRoute>
   }
 />
