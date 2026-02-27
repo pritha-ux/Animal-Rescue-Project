@@ -2,6 +2,7 @@ import { useState } from "react";
 import "../styles/ReportAnimal.css";
 
 function ReportAnimal() {
+  const username = JSON.parse(localStorage.getItem("user"))?.username;
   const [animalName, setAnimalName] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -22,31 +23,42 @@ function ReportAnimal() {
       return;
     }
 
-    // generate a simple case ID
     const newCaseId = "CASE-" + Date.now();
     setCaseId(newCaseId);
 
-    // save report temporarily in localStorage (replace with backend later)
-    const report = {
-      caseId: newCaseId,
-      animalName,
-      description,
-      location,
-      image: image.name,
-      status: "Reported"
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const report = {
+        caseId: newCaseId,
+        animalName,
+        description,
+        location,
+        image: reader.result, // Base64 image
+        status: "Reported",
+        username, // track which user reported
+      };
+
+      // save current user's reports
+      const userReports =
+        JSON.parse(localStorage.getItem(`reports_${username}`)) || [];
+      userReports.push(report);
+      localStorage.setItem(`reports_${username}`, JSON.stringify(userReports));
+
+      // save global reports for admin
+      const allReports = JSON.parse(localStorage.getItem("allReports")) || [];
+      allReports.push(report);
+      localStorage.setItem("allReports", JSON.stringify(allReports));
+
+      alert(`Animal reported successfully! Case ID: ${newCaseId}`);
+
+      // reset form
+      setAnimalName("");
+      setDescription("");
+      setLocation("");
+      setImage(null);
     };
 
-    const savedReports = JSON.parse(localStorage.getItem("reports")) || [];
-    savedReports.push(report);
-    localStorage.setItem("reports", JSON.stringify(savedReports));
-
-    alert(`Animal reported successfully! Case ID: ${newCaseId}`);
-
-    // reset form
-    setAnimalName("");
-    setDescription("");
-    setLocation("");
-    setImage(null);
+    reader.readAsDataURL(image);
   };
 
   return (
@@ -76,11 +88,20 @@ function ReportAnimal() {
 
         <label>Upload Image</label>
         <input type="file" accept="image/*" onChange={handleImageChange} />
+        
+        {image && (
+          <div className="image-preview">
+            <p>Preview:</p>
+            <img src={URL.createObjectURL(image)} alt="Preview" />
+          </div>
+        )}
 
         <button type="submit">Report Animal</button>
 
         {caseId && (
-          <p className="case-id">Your Case ID: <strong>{caseId}</strong></p>
+          <p className="case-id">
+            Your Case ID: <strong>{caseId}</strong>
+          </p>
         )}
       </form>
     </div>
