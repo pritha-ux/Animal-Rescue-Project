@@ -1,0 +1,59 @@
+.dashboard-container {
+  min-height: 100vh;
+  background: var(--light-bg);
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background: var(--primary-color);
+  color: white;
+}
+
+.navbar .brand {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.navbar .links button {
+  background: white;
+  color: var(--primary-color);
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: bold;
+  border: none;
+}
+
+.navbar .links button:hover {
+  background: var(--primary-dark);
+  color: white;
+}
+
+.dashboard-box {
+  max-width: 600px;
+  margin: 60px auto;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.dashboard-box h1 {
+  color: var(--primary-color);
+  margin-bottom: 15px;
+}
+
+.dashboard-buttons {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.dashboard-buttons button {
+  width: 150px;
+}

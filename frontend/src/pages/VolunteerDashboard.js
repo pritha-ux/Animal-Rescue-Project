@@ -1,8 +1,26 @@
+import "../styles/Dashboard.css";
+
 function VolunteerDashboard() {
+  const username = JSON.parse(localStorage.getItem("user"))?.username;
+
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    window.location.href = "/login";
+  };
+
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Volunteer Dashboard</h1>
-      <p>View assigned cases and update rescue status.</p>
+    <div className="dashboard-container">
+      <div className="navbar">
+        <div className="brand">🐾 Animal Rescue System</div>
+        <div className="links">
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      </div>
+
+      <div className="dashboard-box">
+        <h1>Welcome, {username}!</h1>
+        <p>This is your Volunteer Dashboard. You can report animals and track cases here.</p>
+      </div>
     </div>
   );
 }

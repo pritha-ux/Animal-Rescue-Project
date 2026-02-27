@@ -1,8 +1,26 @@
+import "../styles/Dashboard.css";
+
 function ShelterDashboard() {
+  const username = JSON.parse(localStorage.getItem("user"))?.username;
+
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    window.location.href = "/login";
+  };
+
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Shelter Staff Dashboard</h1>
-      <p>Update shelter status and final animal outcomes.</p>
+    <div className="dashboard-container">
+      <div className="navbar">
+        <div className="brand">🐾 Animal Rescue System</div>
+        <div className="links">
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      </div>
+
+      <div className="dashboard-box">
+        <h1>Welcome, {username}!</h1>
+        <p>This is your Shelter Dashboard. You can report animals and track cases here.</p>
+      </div>
     </div>
   );
 }
