@@ -1,0 +1,98 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f6f1e9; /* match login/register theme */
+}
+
+/* Full page flex container: sidebar + main content */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background-color: #ffffff;
+  padding: 30px 20px;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  padding: 12px 15px;
+  margin-bottom: 30px;
+  color:  #f9a825;
+}
+
+.sidebar li {
+  list-style: none;
+  padding: 12px 15px;
+  margin-bottom: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  transition: background 0.2s ease;
+}
+
+.sidebar li:hover {
+  background-color: #f9e49b;
+}
+
+/* Logout button at bottom */
+.sidebar button {
+  margin-top: auto;
+  padding: 10px;
+  background-color: #f9a825;
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.sidebar button:hover {
+  background-color: #fbc02d;
+}
+
+/* Main content area */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 50px 20px;
+  text-align: center;
+}
+
+/* Welcome text */
+.main-content .welcome-text {
+  font-size: 2rem;
+  font-weight: bold;
+  color:  #f9a825;
+  margin-bottom: 30px;
+}
+
+/* Animal image */
+.main-content .dashboard-image {
+  width: 100%;          /* almost full width of main content */
+  max-width: 800px;    /* cap so it doesn’t overflow on large screens */
+  height: 400px;       /* taller to fill space */
+  object-fit: cover;   /* scale image nicely without stretching */
+  border-radius: 12px; /* keeps corners rounded */
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  margin-bottom: 30px;
+}
+
+
+/* Quote */
+.main-content .dashboard-quote {
+  font-size: 1.2rem;
+  font-style: italic;
+  color: #555;
+  max-width: 500px;
+}
