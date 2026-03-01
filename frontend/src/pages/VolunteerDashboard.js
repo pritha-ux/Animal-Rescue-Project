@@ -4,40 +4,55 @@ import "../styles/Dashboard.css";
 
 function VolunteerDashboard() {
   const navigate = useNavigate();
-  const username = JSON.parse(localStorage.getItem("user"))?.username;
+  const username = localStorage.getItem("username"); // get logged-in volunteer username
   const [reports, setReports] = useState([]);
 
   useEffect(() => {
-    const savedReports = JSON.parse(localStorage.getItem("reports")) || [];
-    // only show cases assigned to this volunteer and pending
-    const myCases = savedReports.filter(
-      (report) => report.volunteer === username && report.assignmentStatus === "Pending"
+    // load all reports from admin
+    const allReports = JSON.parse(localStorage.getItem("allReports")) || [];
+
+    // only show cases assigned to this volunteer and still pending
+    const myCases = allReports.filter(
+      (report) =>
+        report.volunteer === username && report.assignmentStatus === "Pending"
     );
+
     setReports(myCases);
   }, [username]);
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
-    window.location.href = "/login";
+    localStorage.removeItem("username");
+    localStorage.removeItem("role");
+    navigate("/login");
   };
 
   const respondToCase = (caseId, response) => {
-    const savedReports = JSON.parse(localStorage.getItem("reports")) || [];
-    const updatedReports = savedReports.map((report) => {
+    const allReports = JSON.parse(localStorage.getItem("allReports")) || [];
+    const updatedReports = allReports.map((report) => {
       if (report.caseId === caseId) {
         return {
           ...report,
-          assignmentStatus: response === "accept" ? "Accepted" : "Declined",
+          assignmentStatus: response === "accept" ? "Accepted" : "Reported",
           status: response === "accept" ? "In Progress" : "Reported",
-          volunteer: response === "accept" ? username : null, // remove volunteer if declined
+          volunteer: response === "accept" ? username : null,
         };
       }
       return report;
     });
 
-    localStorage.setItem("reports", JSON.stringify(updatedReports));
-    setReports(updatedReports.filter(r => r.volunteer === username && r.assignmentStatus === "Pending"));
-    alert(`You have ${response === "accept" ? "accepted" : "declined"} case ${caseId}`);
+    localStorage.setItem("allReports", JSON.stringify(updatedReports));
+
+    // refresh dashboard to show only pending
+    const myCases = updatedReports.filter(
+      (report) =>
+        report.volunteer === username && report.assignmentStatus === "Pending"
+    );
+    setReports(myCases);
+
+    alert(
+      `You have ${response === "accept" ? "accepted" : "declined"} case ${caseId}`
+    );
   };
 
   return (
