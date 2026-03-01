@@ -26,9 +26,15 @@ function Register() {
       return;
     }
 
-    // save user (temporary storage)
+    // check if username already exists
+    if (localStorage.getItem(`user_${username}`)) {
+      alert("Username already exists. Choose a different one.");
+      return;
+    }
+
+    // save user with unique key
     const user = { username, password, role };
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem(`user_${username}`, JSON.stringify(user));
 
     alert("Registration successful!");
     navigate("/login");

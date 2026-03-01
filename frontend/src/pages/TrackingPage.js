@@ -3,10 +3,9 @@ import "../styles/TrackingPage.css";
 
 function TrackingPage() {
   const [reports, setReports] = useState([]);
-  const username = JSON.parse(localStorage.getItem("user"))?.username;
+  const username = localStorage.getItem("username");
 
   useEffect(() => {
-    // fetch only reports for the current user
     const savedReports = JSON.parse(localStorage.getItem(`reports_${username}`)) || [];
     setReports(savedReports);
   }, [username]);

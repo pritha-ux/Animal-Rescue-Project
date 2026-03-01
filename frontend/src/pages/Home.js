@@ -1,13 +1,23 @@
 import "../styles/Dashboard.css";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 function Home() {
-  const username = JSON.parse(localStorage.getItem("user"))?.username;
   const navigate = useNavigate();
+  const username = localStorage.getItem("username");
+
+  // redirect to login if not logged in
+  useEffect(() => {
+    if (!localStorage.getItem("isLoggedIn")) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
-    window.location.href = "/login";
+    localStorage.removeItem("username");
+    localStorage.removeItem("role");
+    navigate("/login");
   };
 
   return (

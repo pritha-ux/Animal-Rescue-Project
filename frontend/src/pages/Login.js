@@ -12,18 +12,17 @@ function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
 
-    const savedUser = JSON.parse(localStorage.getItem("user"));
-
+    const savedUser = JSON.parse(localStorage.getItem(`user_${username}`));
     if (!savedUser) {
       alert("No user found. Please register first.");
       return;
     }
 
-    if (username === savedUser.username && password === savedUser.password) {
+    if (password === savedUser.password) {
       // save session info
       localStorage.setItem("isLoggedIn", true);
-      localStorage.setItem("role", savedUser.role); // store role
-      localStorage.setItem("username", savedUser.username); // optional
+      localStorage.setItem("username", username);
+      localStorage.setItem("role", savedUser.role);
 
       alert("Login successful!");
 
@@ -42,7 +41,7 @@ function Login() {
           navigate("/shelter-dashboard");
           break;
         default:
-          navigate("/home"); // reporter / normal user
+          navigate("/home"); // normal reporter
       }
     } else {
       alert("Invalid username or password");

@@ -1,22 +1,21 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import "../styles/Dashboard.css";
 
 function AdminDashboard() {
-  const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
 
   useEffect(() => {
-    // load reports
-    const savedReports = JSON.parse(localStorage.getItem("reports")) || [];
+    // ✅ load ALL reports (from all users)
+    const savedReports = JSON.parse(localStorage.getItem("allReports")) || [];
     setReports(savedReports);
 
-    // load registered users from localStorage
+    // load registered users
     const allUsers = Object.keys(localStorage)
       .filter(key => key.startsWith("user_"))
       .map(key => JSON.parse(localStorage.getItem(key)));
 
+    // filter volunteers only
     const registeredVolunteers = allUsers
       .filter(u => u.role === "volunteer")
       .map(v => v.username);
@@ -35,14 +34,16 @@ function AdminDashboard() {
         return {
           ...report,
           volunteer: volunteer,
-          assignmentStatus: "Pending" // volunteer has to accept
+          assignmentStatus: "Pending"
         };
       }
       return report;
     });
 
-    localStorage.setItem("reports", JSON.stringify(updatedReports));
+    // ✅ save back to ALL reports (not "reports")
+    localStorage.setItem("allReports", JSON.stringify(updatedReports));
     setReports(updatedReports);
+
     alert(`Case ${caseId} assigned to ${volunteer}`);
   };
 
@@ -74,6 +75,7 @@ function AdminDashboard() {
                 <th>Assign</th>
               </tr>
             </thead>
+
             <tbody>
               {reports.map((report) => (
                 <tr key={report.caseId}>
@@ -83,6 +85,7 @@ function AdminDashboard() {
                   <td>{report.location}</td>
                   <td>{report.status}</td>
                   <td>{report.volunteer || "Unassigned"}</td>
+
                   <td>
                     {report.assignmentStatus === "Pending" ? (
                       "Pending"
@@ -96,6 +99,7 @@ function AdminDashboard() {
                         <option value="" disabled>
                           Assign Volunteer
                         </option>
+
                         {volunteers.map((vol) => (
                           <option key={vol} value={vol}>
                             {vol}
