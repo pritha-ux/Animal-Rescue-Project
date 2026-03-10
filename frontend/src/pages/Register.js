@@ -1,94 +1,96 @@
-import { useState } from "react";
-import "../styles/Register.css";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { register } from '../api';
+import { useAuth } from '../context/AuthContext';
+import '../styles/Auth.css';
 
-function Register() {
+const roles = [
+  { value: 'public', icon: '🌍', label: 'General Public' },
+  { value: 'volunteer', icon: '🙋', label: 'Volunteer' },
+  { value: 'veterinarian', icon: '🩺', label: 'Veterinarian' },
+  { value: 'shelter_staff', icon: '🏠', label: 'Shelter Staff' },
+];
+
+const dashRoutes = { admin: '/admin', public: '/public', volunteer: '/volunteer', veterinarian: '/vet', shelter_staff: '/shelter' };
+
+export default function Register() {
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', role: 'public' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { loginUser } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("user"); // default role
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const handleRegister = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!username || !password || !confirmPassword) {
-      alert("Please fill all fields");
-      return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await register(form);
+      loginUser(res.data.token, res.data);
+      navigate(dashRoutes[res.data.role] || '/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
-      return;
-    }
-
-    // check if username already exists
-    if (localStorage.getItem(`user_${username}`)) {
-      alert("Username already exists. Choose a different one.");
-      return;
-    }
-
-    // save user with unique key
-    const user = { username, password, role };
-    localStorage.setItem(`user_${username}`, JSON.stringify(user));
-
-    alert("Registration successful!");
-    navigate("/login");
   };
 
   return (
-    <div className="register-container">
-      <form className="register-box" onSubmit={handleRegister}>
-        <h2>🐾 Animal Rescue System</h2>
-
-        <label>Username</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-
-        <label>Password</label>
-        <div className="password-field">
-          <input
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <span onClick={() => setShowPassword(!showPassword)}>👁</span>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="auth-icon">🐾</div>
+          <h1>Create Account</h1>
+          <p>Join the Animal Rescue System</p>
         </div>
 
-        <label>Confirm Password</label>
-        <div className="password-field">
-          <input
-            type={showConfirmPassword ? "text" : "password"}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-          <span onClick={() => setShowConfirmPassword(!showConfirmPassword)}>👁</span>
+        {error && <div className="auth-error">{error}</div>}
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Full Name</label>
+            <input type="text" required placeholder="John Doe"
+              value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Email</label>
+            <input type="email" required placeholder="you@example.com"
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Phone</label>
+            <input type="tel" placeholder="9800000000"
+              value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input type="password" required placeholder="••••••••"
+              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+          </div>
+
+          <div className="form-group">
+            <label>Register As</label>
+            <div className="role-grid">
+              {roles.map(r => (
+                <div key={r.value}
+                  className={`role-option ${form.role === r.value ? 'selected' : ''}`}
+                  onClick={() => setForm({ ...form, role: r.value })}>
+                  <span className="role-icon">{r.icon}</span>
+                  <span className="role-label">{r.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Creating account...' : 'Create Account'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          Already have an account? <Link to="/login">Sign in</Link>
         </div>
-
-        <label>Role</label>
-        <select value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="user">General Public</option>
-          <option value="volunteer">Volunteer</option>
-          <option value="vet">Veterinarian</option>
-          <option value="shelter">Shelter Staff</option>
-          <option value="admin">Admin</option>
-        </select>
-
-        <button type="submit">Register</button>
-
-        <p className="link-text">
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </form>
+      </div>
     </div>
   );
 }
-
-export default Register;

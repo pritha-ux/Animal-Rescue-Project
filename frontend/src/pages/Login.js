@@ -1,83 +1,68 @@
-import { useState } from "react";
-import "../styles/Login.css";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { login } from '../api';
+import { useAuth } from '../context/AuthContext';
+import '../styles/Auth.css';
 
-function Login() {
+const dashRoutes = { admin: '/admin', public: '/public', volunteer: '/volunteer', veterinarian: '/vet', shelter_staff: '/shelter' };
+
+export default function Login() {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { loginUser } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleLogin = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const savedUser = JSON.parse(localStorage.getItem(`user_${username}`));
-    if (!savedUser) {
-      alert("No user found. Please register first.");
-      return;
-    }
-
-    if (password === savedUser.password) {
-      // save session info
-      localStorage.setItem("isLoggedIn", true);
-      localStorage.setItem("username", username);
-      localStorage.setItem("role", savedUser.role);
-
-      alert("Login successful!");
-
-      // redirect based on role
-      switch (savedUser.role) {
-        case "admin":
-          navigate("/admin-dashboard");
-          break;
-        case "volunteer":
-          navigate("/volunteer-dashboard");
-          break;
-        case "vet":
-          navigate("/vet-dashboard");
-          break;
-        case "shelter":
-          navigate("/shelter-dashboard");
-          break;
-        default:
-          navigate("/home"); // normal reporter
-      }
-    } else {
-      alert("Invalid username or password");
+    setLoading(true);
+    setError('');
+    try {
+      const res = await login(form);
+      loginUser(res.data.token, res.data);
+      navigate(dashRoutes[res.data.role] || '/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <form className="login-box" onSubmit={handleLogin}>
-        <h2>🐾 Animal Rescue System</h2>
-
-        <label>Username</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-
-        <label>Password</label>
-        <div className="password-field">
-          <input
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <span onClick={() => setShowPassword(!showPassword)}>👁</span>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="auth-icon">🐾</div>
+          <h1>Animal Rescue System</h1>
+          <p>Sign in to your account</p>
         </div>
 
-        <button type="submit">Login</button>
+        {error && <div className="auth-error">{error}</div>}
 
-        <p className="link-text">
-          Don’t have an account? <Link to="/register">Register</Link>
-        </p>
-      </form>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email" required placeholder="you@example.com"
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password" required placeholder="••••••••"
+              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          Don't have an account? <Link to="/register">Register here</Link>
+        </div>
+      </div>
     </div>
   );
 }
-
-export default Login;
