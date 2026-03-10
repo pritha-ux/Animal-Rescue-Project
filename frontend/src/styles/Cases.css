@@ -1,72 +1,36 @@
-/* Report Case */
-.report-page {
-  min-height: 100vh;
-  background: #f5f6fa;
-}
-
-.report-container {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 28px 24px;
-}
-
-.report-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 24px;
-}
-
+.report-page { min-height: 100vh; background: #fff8f3; }
+.report-container { max-width: 680px; margin: 0 auto; padding: 28px 24px; }
+.report-title { font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 24px; }
 .report-form {
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(234,88,12,0.08);
   padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.report-form .form-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
-  display: block;
-}
-
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.report-form .form-group label { font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 6px; display: block; }
 .report-form .form-group input,
 .report-form .form-group select,
 .report-form .form-group textarea {
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid #fed7aa;
   border-radius: 10px;
   padding: 11px 14px;
   font-size: 0.92rem;
   width: 100%;
   transition: border-color 0.2s;
 }
-
 .report-form .form-group input:focus,
 .report-form .form-group select:focus,
 .report-form .form-group textarea:focus {
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234,88,12,0.1);
 }
-
-.file-hint {
-  font-size: 0.8rem;
-  color: #16a34a;
-  margin-top: 6px;
-}
-
+.file-hint { font-size: 0.8rem; color: #ea580c; margin-top: 6px; }
 .report-submit-btn {
-  background: #16a34a;
+  background: #ea580c;
   color: #fff;
   padding: 14px;
   border-radius: 12px;
@@ -74,111 +38,65 @@
   font-size: 1rem;
   transition: background 0.2s;
 }
-
-.report-submit-btn:hover { background: #15803d; }
+.report-submit-btn:hover { background: #c2410c; }
 .report-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Success State */
+/* Success */
 .success-card {
   max-width: 480px;
   margin: 80px auto;
   background: #fff;
   border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 24px rgba(234,88,12,0.1);
   padding: 44px;
   text-align: center;
 }
-
 .success-icon { font-size: 4rem; margin-bottom: 16px; }
 .success-card h2 { font-size: 1.6rem; font-weight: 700; color: #111827; margin-bottom: 8px; }
 .success-card p { color: #6b7280; }
-
 .case-id-box {
-  background: #f0fdf4;
-  border: 2px solid #bbf7d0;
+  background: #fff7ed;
+  border: 2px solid #fed7aa;
   border-radius: 12px;
   padding: 18px;
   margin: 20px 0;
 }
+.case-id-box span { font-size: 2rem; font-weight: 800; color: #ea580c; font-family: monospace; }
+.success-hint { font-size: 0.85rem; color: #9ca3af; margin-bottom: 24px; }
+.success-actions { display: flex; gap: 12px; justify-content: center; }
+.success-actions button { padding: 10px 24px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; }
 
-.case-id-box span {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #16a34a;
-  font-family: monospace;
-}
-
-.success-hint {
-  font-size: 0.85rem;
-  color: #9ca3af;
-  margin-bottom: 24px;
-}
-
-.success-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.success-actions button {
-  padding: 10px 24px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-/* Track Case Page */
+/* Track */
 .track-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0fdf4, #eff6ff);
+  background: linear-gradient(135deg, #fff4ec, #fff8f3);
   padding: 16px;
 }
-
-.track-container {
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-.track-header {
-  text-align: center;
-  padding-top: 48px;
-  margin-bottom: 32px;
-}
-
+.track-container { max-width: 680px; margin: 0 auto; }
+.track-header { text-align: center; padding-top: 48px; margin-bottom: 32px; }
 .track-header .track-icon { font-size: 3rem; margin-bottom: 10px; }
 .track-header h1 { font-size: 2rem; font-weight: 700; color: #111827; }
 .track-header p { color: #6b7280; margin-top: 6px; }
-
 .track-search-box {
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 12px rgba(234,88,12,0.1);
   padding: 24px;
   margin-bottom: 24px;
 }
-
-.track-search-row {
-  display: flex;
-  gap: 12px;
-}
-
+.track-search-row { display: flex; gap: 12px; }
 .track-input {
   flex: 1;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid #fed7aa;
   border-radius: 10px;
   padding: 13px 16px;
   font-size: 1rem;
   font-family: monospace;
   transition: border-color 0.2s;
 }
-
-.track-input:focus {
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22,163,74,0.1);
-}
-
+.track-input:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234,88,12,0.1); }
 .track-btn {
-  background: #16a34a;
+  background: #ea580c;
   color: #fff;
   padding: 12px 24px;
   border-radius: 10px;
@@ -186,34 +104,20 @@
   font-size: 0.95rem;
   transition: background 0.2s;
 }
-
-.track-btn:hover { background: #15803d; }
+.track-btn:hover { background: #c2410c; }
 .track-btn:disabled { opacity: 0.6; }
+.track-error { color: #dc2626; font-size: 0.85rem; margin-top: 8px; }
 
-.track-error {
-  color: #dc2626;
-  font-size: 0.85rem;
-  margin-top: 8px;
-}
-
-/* Track result */
 .track-results { display: flex; flex-direction: column; gap: 16px; }
-
 .track-card {
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 10px rgba(234,88,12,0.08);
   padding: 24px;
+  border-left: 4px solid #ea580c;
 }
-
-.track-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.track-card-id { font-family: monospace; font-weight: 700; font-size: 1.1rem; color: #16a34a; }
+.track-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.track-card-id { font-family: monospace; font-weight: 700; font-size: 1.1rem; color: #ea580c; }
 .track-card-animal { color: #6b7280; font-size: 0.88rem; margin-top: 2px; }
 .track-card-desc { color: #374151; margin-bottom: 10px; font-size: 0.92rem; line-height: 1.5; }
 .track-card-meta { font-size: 0.83rem; color: #9ca3af; }
@@ -225,36 +129,25 @@
 .timeline h3 { font-weight: 700; color: #111827; margin-bottom: 16px; }
 .timeline-item { display: flex; gap: 12px; }
 .timeline-dot-col { display: flex; flex-direction: column; align-items: center; }
-.timeline-dot { width: 12px; height: 12px; border-radius: 50%; background: #16a34a; flex-shrink: 0; margin-top: 4px; }
-.timeline-line { width: 2px; flex: 1; background: #e5e7eb; margin: 4px 0; }
+.timeline-dot { width: 12px; height: 12px; border-radius: 50%; background: #ea580c; flex-shrink: 0; margin-top: 4px; }
+.timeline-line { width: 2px; flex: 1; background: #fed7aa; margin: 4px 0; }
 .timeline-content { padding-bottom: 16px; }
 .timeline-note { font-size: 0.85rem; color: #6b7280; margin-top: 4px; }
 .timeline-time { font-size: 0.78rem; color: #9ca3af; margin-top: 2px; }
 
-.medical-item { border-left: 4px solid #f97316; padding-left: 14px; margin-bottom: 14px; }
+.medical-item { border-left: 4px solid #ea580c; padding-left: 14px; margin-bottom: 14px; }
 .medical-item strong { font-size: 0.95rem; color: #111827; }
 .medical-item p { font-size: 0.85rem; color: #6b7280; margin-top: 2px; }
 
 .outcome-card {
-  background: #f0fdf4;
-  border: 1.5px solid #bbf7d0;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
   border-radius: 16px;
   padding: 20px;
 }
+.outcome-card h3 { font-weight: 700; color: #c2410c; margin-bottom: 8px; }
+.outcome-card p { font-size: 0.88rem; color: #ea580c; }
 
-.outcome-card h3 { font-weight: 700; color: #166534; margin-bottom: 8px; }
-.outcome-card p { font-size: 0.88rem; color: #15803d; }
-
-.track-back {
-  text-align: center;
-  margin-top: 24px;
-}
-
-.track-back button {
-  background: none;
-  color: #16a34a;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
+.track-back { text-align: center; margin-top: 24px; }
+.track-back button { background: none; color: #ea580c; font-size: 0.88rem; font-weight: 600; }
 .track-back button:hover { text-decoration: underline; }
