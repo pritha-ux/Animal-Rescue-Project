@@ -1,121 +1,90 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import "../styles/Dashboard.css";
+import { useState, useEffect } from 'react';
+import { getVolunteerCases, acceptCase, declineCase, markInTransit } from '../api';
+import Navbar from '../components/Navbar';
+import StatusBadge from '../components/StatusBadge';
+import '../styles/Dashboard.css';
 
-function VolunteerDashboard() {
-  const navigate = useNavigate();
-  const username = localStorage.getItem("username"); // get logged-in volunteer username
-  const [reports, setReports] = useState([]);
+export default function VolunteerDashboard() {
+  const [cases, setCases] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState('');
 
-  useEffect(() => {
-    // load all reports from admin
-    const allReports = JSON.parse(localStorage.getItem("allReports")) || [];
+  const load = () => getVolunteerCases().then(r => setCases(r.data)).finally(() => setLoading(false));
+  useEffect(() => { load(); }, []);
 
-    // only show cases assigned to this volunteer and still pending
-    const myCases = allReports.filter(
-      (report) =>
-        report.volunteer === username && report.assignmentStatus === "Pending"
-    );
-
-    setReports(myCases);
-  }, [username]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("username");
-    localStorage.removeItem("role");
-    navigate("/login");
-  };
-
-  const respondToCase = (caseId, response) => {
-    const allReports = JSON.parse(localStorage.getItem("allReports")) || [];
-    const updatedReports = allReports.map((report) => {
-      if (report.caseId === caseId) {
-        return {
-          ...report,
-          assignmentStatus: response === "accept" ? "Accepted" : "Reported",
-          status: response === "accept" ? "In Progress" : "Reported",
-          volunteer: response === "accept" ? username : null,
-        };
-      }
-      return report;
-    });
-
-    localStorage.setItem("allReports", JSON.stringify(updatedReports));
-
-    // refresh dashboard to show only pending
-    const myCases = updatedReports.filter(
-      (report) =>
-        report.volunteer === username && report.assignmentStatus === "Pending"
-    );
-    setReports(myCases);
-
-    alert(
-      `You have ${response === "accept" ? "accepted" : "declined"} case ${caseId}`
-    );
+  const handle = async (fn, successMsg) => {
+    await fn();
+    setMsg(successMsg);
+    load();
   };
 
   return (
-    <div className="dashboard-container">
-      <div className="navbar">
-        <div className="brand">🐾 Animal Rescue System - Volunteer</div>
-        <div className="links">
-          <button onClick={handleLogout}>Logout</button>
+    <div className="dashboard-page">
+      <Navbar />
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <h1 className="dashboard-title">🙋 Volunteer Dashboard</h1>
         </div>
-      </div>
 
-      <div className="dashboard-box">
-        <h1>Welcome, {username}!</h1>
-        <p>Here are the cases assigned to you:</p>
-
-        {reports.length === 0 ? (
-          <p>No pending cases at the moment.</p>
-        ) : (
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>Case ID</th>
-                <th>Animal Name</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Image</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((report) => (
-                <tr key={report.caseId}>
-                  <td>{report.caseId}</td>
-                  <td>{report.animalName}</td>
-                  <td>{report.description}</td>
-                  <td>{report.location}</td>
-                  <td>
-                    {report.image ? (
-                      <img
-                        src={report.image}
-                        alt={report.animalName}
-                        style={{ width: "80px", height: "80px", objectFit: "cover" }}
-                      />
-                    ) : (
-                      "No image"
-                    )}
-                  </td>
-                  <td>
-                    <button onClick={() => respondToCase(report.caseId, "accept")}>
-                      Accept
-                    </button>
-                    <button onClick={() => respondToCase(report.caseId, "decline")}>
-                      Decline
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {msg && (
+          <div className="alert-success">
+            {msg} <button className="alert-close" onClick={() => setMsg('')}>✕</button>
+          </div>
         )}
+
+        {loading ? <div className="loading">Loading your cases...</div>
+          : cases.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🙋</div>
+              <p>No cases assigned to you yet. Check back later!</p>
+            </div>
+          ) : (
+            <div className="case-list">
+              {cases.map(c => (
+                <div key={c._id} className="case-card">
+                  <div className="case-card-header">
+                    <div className="case-card-id-row">
+                      <span className="case-id">{c.caseId}</span>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    <span className="case-card-date">{new Date(c.createdAt).toLocaleDateString()}</span>
+                  </div>
+
+                  <p className="case-card-title">{c.animalName} ({c.animalType})</p>
+                  <p className="case-card-desc">{c.description}</p>
+                  <p className="case-card-meta">📍 {c.location?.address}</p>
+                  {c.reportedBy && (
+                    <p className="case-card-meta">👤 Reported by: {c.reportedBy.name} • {c.reportedBy.phone}</p>
+                  )}
+
+                  <div className="case-card-actions">
+                    {c.status === 'assigned' && (
+                      <>
+                        <button className="btn btn-green"
+                          onClick={() => handle(() => acceptCase(c._id), '✅ Case accepted!')}>
+                          ✅ Accept Case
+                        </button>
+                        <button className="btn btn-red"
+                          onClick={() => handle(() => declineCase(c._id, { reason: 'Cannot attend' }), 'Case declined')}>
+                          ❌ Decline
+                        </button>
+                      </>
+                    )}
+                    {c.status === 'volunteer_accepted' && (
+                      <button className="btn btn-purple"
+                        onClick={() => handle(() => markInTransit(c._id), '🚗 Marked as in transit!')}>
+                        🚗 Mark In Transit (Animal Picked Up)
+                      </button>
+                    )}
+                    {c.status === 'in_transit' && (
+                      <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>🚗 Currently in transit to vet...</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );
 }
-
-export default VolunteerDashboard;
