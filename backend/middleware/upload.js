@@ -14,16 +14,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowed = /jpeg|jpg|png|gif|pdf|doc|docx/;
-  const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mime = allowed.test(file.mimetype);
-  if (ext && mime) cb(null, true);
-  else cb(new Error('Only images and documents are allowed'));
-};
-
 export const upload = multer({ 
-  storage, 
-  fileFilter, 
-  limits: { fileSize: 10 * 1024 * 1024 } 
-});git 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
