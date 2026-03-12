@@ -1,7 +1,6 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 
-// Public: Report a new animal case
 export const reportCase = async (req, res) => {
   try {
     const { animalName, animalType, description, address, lat, lng } = req.body;
@@ -12,18 +11,18 @@ export const reportCase = async (req, res) => {
       animalName,
       animalType,
       description,
-      location: { address, coordinates: { lat, lng } },
+      location: { address, lat, lng }, // ✅ fixed - removed coordinates nesting
       images,
       statusHistory: [{ status: 'reported', updatedBy: req.user._id, note: 'Case reported by public' }],
     });
 
     res.status(201).json({ message: 'Case reported successfully', case: newCase });
   } catch (err) {
+    console.error('❌ reportCase error:', err.message);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Public: Track a case by caseId
 export const trackCase = async (req, res) => {
   try {
     const caseData = await Case.findOne({ caseId: req.params.caseId })
@@ -34,14 +33,12 @@ export const trackCase = async (req, res) => {
       .populate('statusHistory.updatedBy', 'name role');
 
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
-
     res.json(caseData);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Public: Get all their own reported cases
 export const getMyCases = async (req, res) => {
   try {
     const cases = await Case.find({ reportedBy: req.user._id }).sort({ createdAt: -1 });
@@ -51,7 +48,6 @@ export const getMyCases = async (req, res) => {
   }
 };
 
-// Admin: Get all cases
 export const getAllCases = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -69,7 +65,6 @@ export const getAllCases = async (req, res) => {
   }
 };
 
-// Admin: Assign volunteer to case
 export const assignVolunteer = async (req, res) => {
   try {
     const { volunteerId } = req.body;
@@ -78,10 +73,9 @@ export const assignVolunteer = async (req, res) => {
 
     caseData.assignedVolunteer = volunteerId;
     caseData.status = 'assigned';
-    caseData.statusHistory.push({ status: 'assigned', updatedBy: req.user._id, note: `Volunteer assigned by admin` });
+    caseData.statusHistory.push({ status: 'assigned', updatedBy: req.user._id, note: 'Volunteer assigned by admin' });
     await caseData.save();
 
-    // Notify volunteer
     await Notification.create({
       caseId: caseData._id,
       recipient: volunteerId,
@@ -89,7 +83,6 @@ export const assignVolunteer = async (req, res) => {
       type: 'assignment',
     });
 
-    // Notify reporter
     await Notification.create({
       caseId: caseData._id,
       recipient: caseData.reportedBy,
@@ -103,7 +96,6 @@ export const assignVolunteer = async (req, res) => {
   }
 };
 
-// Admin: Assign vet to case
 export const assignVet = async (req, res) => {
   try {
     const { vetId } = req.body;
@@ -126,7 +118,6 @@ export const assignVet = async (req, res) => {
   }
 };
 
-// Admin: Assign shelter to case
 export const assignShelter = async (req, res) => {
   try {
     const { shelterId } = req.body;
@@ -149,7 +140,6 @@ export const assignShelter = async (req, res) => {
   }
 };
 
-// Get single case by ID (admin/staff)
 export const getCaseById = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id)

@@ -23,6 +23,7 @@ const caseSchema = new mongoose.Schema({
   statusHistory: [{
     status: String,
     note: String,
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     timestamp: { type: Date, default: Date.now },
   }],
   medicalRecords: [{
@@ -48,12 +49,12 @@ const caseSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-caseSchema.pre('save', async function (next) {
+// ✅ No 'next' parameter at all
+caseSchema.pre('save', async function () {
   if (!this.caseId) {
     const count = await mongoose.model('Case').countDocuments();
     this.caseId = `CASE-${String(count + 1).padStart(4, '0')}`;
   }
-  next();
 });
 
 export default mongoose.model('Case', caseSchema);
