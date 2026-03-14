@@ -10,6 +10,7 @@ import caseRoutes from "./routes/caseRoutes.js";
 import volunteerRoutes from "./routes/volunteerRoutes.js";
 import notificationRoutes from "./routes/NotificationRoutes.js";
 import adminRoutes from "./routes/AdminRoutes.js";
+import vetRoutes from "./routes/vetRoutes.js";
 dotenv.config();
 connectDB();
 
@@ -29,6 +30,6 @@ app.use("/api/cases", caseRoutes);
 app.use("/api/volunteer", volunteerRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
-
+app.use("/api/vet", vetRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,7 +1,8 @@
+// vetRoutes.js
 import express from 'express';
 import { protect, roleCheck } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
-import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone } from '../controllers/vetController.js';
+import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone } from '../controllers/VetController.js';
 
 const router = express.Router();
 router.get('/cases', protect, roleCheck('veterinarian'), getVetCases);
