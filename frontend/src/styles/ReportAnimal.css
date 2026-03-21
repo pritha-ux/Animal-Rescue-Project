@@ -1,0 +1,59 @@
+.report-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--light-bg);
+}
+
+.report-box {
+  background: white;
+  padding: 40px;
+  width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.report-box h2 {
+  text-align: center;
+  color: var(--primary-color);
+  margin-bottom: 25px;
+}
+
+.report-box label {
+  display: block;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.report-box input,
+.report-box textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.report-box textarea {
+  resize: vertical;
+  height: 80px;
+}
+
+.case-id {
+  margin-top: 15px;
+  text-align: center;
+  color: var(--primary-color);
+  font-weight: bold;
+}
+.image-preview {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+}

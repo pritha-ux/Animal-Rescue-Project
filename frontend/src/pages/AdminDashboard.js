@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
-import { getDashboardStats, getAllCases, getUsersByRole, assignVolunteer, assignVet, assignShelter, closeCase } from '../api';
+import { getDashboardStats, getAllCases, getUsersByRole, assignVolunteer, closeCase } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
+
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+};
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -14,6 +23,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState('dashboard');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedCase, setSelectedCase] = useState(null);
+  const [selectedVol, setSelectedVol] = useState('');
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
 
@@ -22,27 +32,32 @@ export default function AdminDashboard() {
       getDashboardStats(), getAllCases(),
       getUsersByRole('volunteer'), getUsersByRole('veterinarian'), getUsersByRole('shelter_staff'),
     ]).then(([s, c, v, vet, sh]) => {
-      setStats(s.data); setCases(c.data.cases);
-      setVolunteers(v.data); setVets(vet.data); setShelters(sh.data);
+      setStats(s.data);
+      setCases(c.data.cases);
+      setVolunteers(v.data);
+      setVets(vet.data);
+      setShelters(sh.data);
     }).finally(() => setLoading(false));
   }, []);
 
   const refreshCases = () => getAllCases({ status: statusFilter }).then(r => setCases(r.data.cases));
 
-  const doAssign = async (fn, successMsg) => {
-    await fn();
-    setMsg(successMsg);
+  const doAssignVolunteer = async () => {
+    if (!selectedVol) return;
+    await assignVolunteer(selectedCase._id, { volunteerId: selectedVol });
+    setMsg('Volunteer assigned successfully!');
     setSelectedCase(null);
+    setSelectedVol('');
     refreshCases();
   };
 
   const statCards = stats ? [
-    { label: 'Total Cases', value: stats.totalCases, cls: 'blue', icon: '📋' },
-    { label: 'Reported', value: stats.statusBreakdown.reported, cls: 'yellow', icon: '🆕' },
-    { label: 'In Transit', value: stats.statusBreakdown.inTransit, cls: 'purple', icon: '🚗' },
-    { label: 'At Vet', value: stats.statusBreakdown.atVet, cls: 'orange', icon: '🩺' },
-    { label: 'At Shelter', value: stats.statusBreakdown.atShelter, cls: 'teal', icon: '🏠' },
-    { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green', icon: '🎉' },
+    { label: 'Total Cases', value: stats.totalCases, cls: 'blue' },
+    { label: 'Reported', value: stats.statusBreakdown.reported, cls: 'yellow' },
+    { label: 'In Transit', value: stats.statusBreakdown.inTransit, cls: 'purple' },
+    { label: 'At Vet', value: stats.statusBreakdown.atVet, cls: 'orange' },
+    { label: 'At Shelter', value: stats.statusBreakdown.atShelter, cls: 'teal' },
+    { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
   ] : [];
 
   if (loading) return <div className="loading">Loading dashboard...</div>;
@@ -52,7 +67,7 @@ export default function AdminDashboard() {
       <Navbar />
       <div className="dashboard-container">
         <div className="dashboard-header">
-          <h1 className="dashboard-title">🛡️ Admin Dashboard</h1>
+          <h1 className="dashboard-title">Admin Dashboard</h1>
         </div>
 
         {msg && (
@@ -64,7 +79,9 @@ export default function AdminDashboard() {
 
         <div className="tabs">
           {['dashboard', 'cases', 'staff'].map(t => (
-            <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+            <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
           ))}
         </div>
 
@@ -74,7 +91,6 @@ export default function AdminDashboard() {
             <div className="stats-grid">
               {statCards.map((s, i) => (
                 <div key={i} className={`stat-card ${s.cls}`}>
-                  <div className="stat-icon">{s.icon}</div>
                   <div className="stat-value">{s.value}</div>
                   <div className="stat-label">{s.label}</div>
                 </div>
@@ -84,15 +100,15 @@ export default function AdminDashboard() {
             <div className="mini-stats">
               <div className="mini-stat blue">
                 <div className="mini-stat-value">{stats.staff.totalVolunteers}</div>
-                <div className="mini-stat-label">🙋 Volunteers</div>
+                <div className="mini-stat-label">Volunteers</div>
               </div>
               <div className="mini-stat orange">
                 <div className="mini-stat-value">{stats.staff.totalVets}</div>
-                <div className="mini-stat-label">🩺 Veterinarians</div>
+                <div className="mini-stat-label">Veterinarians</div>
               </div>
               <div className="mini-stat teal">
                 <div className="mini-stat-value">{stats.staff.totalShelterStaff}</div>
-                <div className="mini-stat-label">🏠 Shelter Staff</div>
+                <div className="mini-stat-label">Shelter Staff</div>
               </div>
             </div>
 
@@ -101,7 +117,12 @@ export default function AdminDashboard() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Case ID</th><th>Animal</th><th>Location</th><th>Status</th><th>Reported By</th>
+                    <th>Case ID</th>
+                    <th>Animal</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Reported By</th>
+                    <th>Date & Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,6 +133,7 @@ export default function AdminDashboard() {
                       <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.location?.address}</td>
                       <td><StatusBadge status={c.status} /></td>
                       <td>{c.reportedBy?.name}</td>
+                      <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatDateTime(c.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -125,7 +147,10 @@ export default function AdminDashboard() {
           <>
             <div className="filter-row">
               <select className="filter-select" value={statusFilter}
-                onChange={e => { setStatusFilter(e.target.value); getAllCases({ status: e.target.value }).then(r => setCases(r.data.cases)); }}>
+                onChange={e => {
+                  setStatusFilter(e.target.value);
+                  getAllCases({ status: e.target.value }).then(r => setCases(r.data.cases));
+                }}>
                 <option value="">All Status</option>
                 {['reported','assigned','volunteer_accepted','volunteer_declined','in_transit','at_vet','at_shelter','adopted','returned_to_owner','closed'].map(s => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
@@ -135,7 +160,15 @@ export default function AdminDashboard() {
             <div className="table-wrapper">
               <table className="data-table">
                 <thead>
-                  <tr><th>Case ID</th><th>Animal</th><th>Location</th><th>Status</th><th>Volunteer</th><th>Actions</th></tr>
+                  <tr>
+                    <th>Case ID</th>
+                    <th>Animal</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Volunteer</th>
+                    <th>Reported At</th>
+                    <th>Actions</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {cases.map(c => (
@@ -144,9 +177,12 @@ export default function AdminDashboard() {
                       <td>{c.animalName} ({c.animalType})</td>
                       <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.location?.address}</td>
                       <td><StatusBadge status={c.status} /></td>
-                      <td>{c.assignedVolunteer?.name || '—'}</td>
+                      <td>{c.assignedVolunteer?.name || <span style={{ color: '#d1d5db' }}>Not assigned</span>}</td>
+                      <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatDateTime(c.createdAt)}</td>
                       <td>
-                        <button className="action-link blue" onClick={() => setSelectedCase(c)}>Assign</button>
+                        <button className="action-link blue" onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>
+                          Assign
+                        </button>
                         {!['closed','adopted','returned_to_owner'].includes(c.status) && (
                           <button className="action-link red" style={{ marginLeft: 8 }}
                             onClick={() => closeCase(c._id, { note: 'Closed by admin' }).then(() => { setMsg('Case closed!'); refreshCases(); })}>
@@ -166,20 +202,21 @@ export default function AdminDashboard() {
         {tab === 'staff' && (
           <div className="staff-grid">
             {[
-              { title: '🙋 Volunteers', list: volunteers },
-              { title: '🩺 Veterinarians', list: vets },
-              { title: '🏠 Shelter Staff', list: shelters },
+              { title: 'Volunteers', list: volunteers },
+              { title: 'Veterinarians', list: vets },
+              { title: 'Shelter Staff', list: shelters },
             ].map(({ title, list }) => (
               <div key={title} className="staff-card">
-                <p className="staff-card-title">{title} ({list.length})</p>
+                <p className="staff-card-title">{title} <span style={{ color: '#ea580c' }}>({list.length})</span></p>
                 {list.length === 0
                   ? <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>None registered yet</p>
                   : list.map(u => (
                     <div key={u._id} className="staff-member">
-                      <div className="staff-avatar">{u.name[0]}</div>
+                      <div className="staff-avatar">{u.name[0].toUpperCase()}</div>
                       <div className="staff-info">
                         <p>{u.name}</p>
                         <span>{u.email}</span>
+                        {u.phone && <span> · {u.phone}</span>}
                       </div>
                     </div>
                   ))
@@ -189,54 +226,29 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ASSIGN MODAL */}
+        {/* ASSIGN VOLUNTEER MODAL */}
         {selectedCase && (
           <div className="modal-overlay" onClick={() => setSelectedCase(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3 className="modal-title">Assign Team — {selectedCase.caseId}</h3>
+              <h3 className="modal-title">Assign Volunteer</h3>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 16 }}>
+                Case: <strong>{selectedCase.caseId}</strong> — {selectedCase.animalType} at {selectedCase.location?.address}
+              </p>
 
               <div className="modal-form">
-                <p className="modal-section-label">Assign Volunteer</p>
-                <div className="modal-assign-row">
-                  <select id="vol-sel">
-                    <option value="">Select volunteer</option>
-                    {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                  </select>
-                  <button className="btn btn-blue"
-                    onClick={() => { const v = document.getElementById('vol-sel').value; if(v) doAssign(() => assignVolunteer(selectedCase._id, { volunteerId: v }), 'Volunteer assigned!'); }}>
-                    Assign
-                  </button>
-                </div>
-
-                <hr className="modal-divider" />
-                <p className="modal-section-label">Assign Veterinarian</p>
-                <div className="modal-assign-row">
-                  <select id="vet-sel">
-                    <option value="">Select vet</option>
-                    {vets.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                  </select>
-                  <button className="btn btn-orange"
-                    onClick={() => { const v = document.getElementById('vet-sel').value; if(v) doAssign(() => assignVet(selectedCase._id, { vetId: v }), 'Vet assigned!'); }}>
-                    Assign
-                  </button>
-                </div>
-
-                <hr className="modal-divider" />
-                <p className="modal-section-label">Assign Shelter</p>
-                <div className="modal-assign-row">
-                  <select id="shl-sel">
-                    <option value="">Select shelter</option>
-                    {shelters.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                  </select>
-                  <button className="btn btn-teal"
-                    onClick={() => { const v = document.getElementById('shl-sel').value; if(v) doAssign(() => assignShelter(selectedCase._id, { shelterId: v }), 'Shelter assigned!'); }}>
-                    Assign
-                  </button>
-                </div>
+                <p className="modal-section-label">Select Volunteer</p>
+                <select value={selectedVol} onChange={e => setSelectedVol(e.target.value)}
+                  style={{ border: '1.5px solid #fed7aa', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', width: '100%' }}>
+                  <option value="">Choose a volunteer...</option>
+                  {volunteers.map(v => (
+                    <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="modal-actions">
-                <button className="btn btn-gray" onClick={() => setSelectedCase(null)}>Close</button>
+                <button className="btn btn-orange" onClick={doAssignVolunteer}>Assign Volunteer</button>
+                <button className="btn btn-gray" onClick={() => setSelectedCase(null)}>Cancel</button>
               </div>
             </div>
           </div>

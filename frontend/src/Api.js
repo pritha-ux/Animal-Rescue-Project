@@ -28,6 +28,9 @@ export const getVolunteerCases = () => API.get('/volunteer/cases');
 export const acceptCase = (id) => API.put(`/volunteer/cases/${id}/accept`);
 export const declineCase = (id, data) => API.put(`/volunteer/cases/${id}/decline`, data);
 export const markInTransit = (id) => API.put(`/volunteer/cases/${id}/transit`);
+export const getVolunteerStaff = () => API.get('/volunteer/staff');
+export const assignVetByVolunteer = (id, data) => API.put(`/volunteer/cases/${id}/assign-vet`, data);
+export const assignShelterByVolunteer = (id, data) => API.put(`/volunteer/cases/${id}/assign-shelter`, data);
 
 // Vet
 export const getVetCases = () => API.get('/vet/cases');
