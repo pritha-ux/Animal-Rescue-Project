@@ -93,18 +93,29 @@ export const markTreatmentDone = async (req, res) => {
     if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
 
+    // ← change status so buttons hide
+    caseData.status = 'treatment_done';
     caseData.statusHistory.push({
-      status: 'at_vet',
+      status: 'treatment_done',
       updatedBy: req.user._id,
-      note: 'Treatment completed. Animal ready for shelter.',
+      note: 'Treatment completed. Animal ready to be moved to shelter.',
     });
     await caseData.save();
+
+    if (caseData.assignedShelter) {
+      await Notification.create({
+        caseId: caseData._id,
+        recipient: caseData.assignedShelter,
+        message: `Treatment complete for case ${caseData.caseId}. Please admit the animal.`,
+        type: 'status_update',
+      });
+    }
 
     await Notification.create({
       caseId: caseData._id,
       recipient: caseData.reportedBy,
-      message: `Treatment for the animal in case ${caseData.caseId} is complete. Animal will be moved to shelter soon.`,
-      type: 'medical_update',
+      message: `Treatment for case ${caseData.caseId} is complete.`,
+      type: 'status_update',
     });
 
     res.json({ message: 'Treatment marked as done', case: caseData });
@@ -112,3 +123,4 @@ export const markTreatmentDone = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
