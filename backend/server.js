@@ -11,6 +11,7 @@ import volunteerRoutes from "./routes/volunteerRoutes.js";
 import notificationRoutes from "./routes/NotificationRoutes.js";
 import adminRoutes from "./routes/AdminRoutes.js";
 import vetRoutes from "./routes/vetRoutes.js";
+import shelterRoutes from "./routes/ShelterRoutes.js";
 dotenv.config();
 connectDB();
 
