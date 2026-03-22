@@ -5,6 +5,15 @@ import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+};
+
 export default function ShelterDashboard() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,7 +133,7 @@ export default function ShelterDashboard() {
                   <h3 className="modal-title">🎉 Mark as Adopted</h3>
                   <div className="modal-form">
                     {field('adopterName', 'Adopter Name *')}
-                    {field('adopterContact', 'Adopter Contact / Phone')}
+                    {field('adopterContact', 'Adopter Contact / Phone *')}
                     {field('notes', 'Notes')}
                   </div>
                   <div className="modal-actions">
