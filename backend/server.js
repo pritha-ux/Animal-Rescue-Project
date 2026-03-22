@@ -32,5 +32,7 @@ app.use("/api/volunteer", volunteerRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/vet", vetRoutes);
+app.use('/api/shelter', shelterRoutes);
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

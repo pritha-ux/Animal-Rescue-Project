@@ -45,7 +45,7 @@ export default function VolunteerDashboard() {
   const handleAssignVet = async () => {
     if (!selectedVet) return;
     await assignVetByVolunteer(modal._id, { vetId: selectedVet });
-    setMsg('✅ Veterinarian assigned!');
+    setMsg('Veterinarian assigned!');
     setModal(null);
     setSelectedVet('');
     load();
@@ -54,7 +54,7 @@ export default function VolunteerDashboard() {
   const handleAssignShelter = async () => {
     if (!selectedShelter) return;
     await assignShelterByVolunteer(modal._id, { shelterId: selectedShelter });
-    setMsg('✅ Shelter assigned!');
+    setMsg('Shelter assigned!');
     setModal(null);
     setSelectedShelter('');
     load();
@@ -65,12 +65,13 @@ export default function VolunteerDashboard() {
       <Navbar />
       <div className="dashboard-container">
         <div className="dashboard-header">
-          <h1 className="dashboard-title">🙋 Volunteer Dashboard</h1>
+          <h1 className="dashboard-title">Volunteer Dashboard</h1>
         </div>
 
         {msg && (
           <div className="alert-success">
-            {msg} <button className="alert-close" onClick={() => setMsg('')}>✕</button>
+            {msg}
+            <button className="alert-close" onClick={() => setMsg('')}>✕</button>
           </div>
         )}
 
@@ -78,7 +79,8 @@ export default function VolunteerDashboard() {
           : cases.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🙋</div>
-              <p>No cases assigned to you yet. Check back later!</p>
+              <h3>No cases assigned yet</h3>
+              <p>Cases assigned to you will appear here.</p>
             </div>
           ) : (
             <div className="case-list">
@@ -89,71 +91,79 @@ export default function VolunteerDashboard() {
                       <span className="case-id">{c.caseId}</span>
                       <StatusBadge status={c.status} />
                     </div>
-                    <span className="case-card-date">📅 {formatDateTime(c.createdAt)}</span>
+                    <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
                   </div>
 
                   <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
                   <p className="case-card-desc">{c.description}</p>
                   <p className="case-card-meta">📍 {c.location?.address}</p>
                   {c.reportedBy && (
-                    <p className="case-card-meta">👤 Reported by: {c.reportedBy.name} • {c.reportedBy.phone}</p>
+                    <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
                   )}
 
-                  {/* Assigned team */}
+                  {/* Assigned team info */}
                   <div className="case-assign-info">
                     <p className="case-card-meta">
-                      🩺 Vet: {c.assignedVet ? <strong>{c.assignedVet.name}</strong> : <span style={{color:'#ea580c'}}>Not assigned</span>}
+                      🩺 Vet: {c.assignedVet
+                        ? <strong>{c.assignedVet.name}</strong>
+                        : <span style={{ color: '#ea580c' }}>Not assigned</span>}
                     </p>
                     <p className="case-card-meta">
-                      🏠 Shelter: {c.assignedShelter ? <strong>{c.assignedShelter.name}</strong> : <span style={{color:'#ea580c'}}>Not assigned</span>}
+                      🏠 Shelter: {c.assignedShelter
+                        ? <strong>{c.assignedShelter.name}</strong>
+                        : <span style={{ color: '#ea580c' }}>Not assigned</span>}
                     </p>
                   </div>
 
                   {/* Status History */}
                   {c.statusHistory?.length > 0 && (
                     <div className="status-history">
-                      <p className="history-label">📋 Status History:</p>
+                      <p className="history-label">Status History</p>
                       {c.statusHistory.map((h, i) => (
                         <div key={i} className="history-item">
                           <StatusBadge status={h.status} />
-                          <span className="history-time">🕐 {formatDateTime(h.timestamp)}</span>
-                          {h.note && <span className="history-note"> — {h.note}</span>}
+                          <span className="history-time">{formatDateTime(h.timestamp)}</span>
+                          {h.note && <span className="history-note">— {h.note}</span>}
                         </div>
                       ))}
                     </div>
                   )}
 
                   <div className="case-card-actions">
+                    {/* Accept / Decline */}
                     {c.status === 'assigned' && (
                       <>
                         <button className="btn btn-green"
-                          onClick={() => handle(() => acceptCase(c._id), '✅ Case accepted!')}>
-                          ✅ Accept Case
+                          onClick={() => handle(() => acceptCase(c._id), 'Case accepted!')}>
+                          Accept Case
                         </button>
                         <button className="btn btn-red"
                           onClick={() => handle(() => declineCase(c._id, { reason: 'Cannot attend' }), 'Case declined')}>
-                          ❌ Decline
+                          Decline
                         </button>
                       </>
                     )}
+
+                    {/* Mark In Transit */}
                     {c.status === 'volunteer_accepted' && (
-                      <>
-                        <button className="btn btn-purple"
-                          onClick={() => handle(() => markInTransit(c._id), '🚗 Marked as in transit!')}>
-                          🚗 Mark In Transit
-                        </button>
-                        <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
-                          👥 Assign Vet & Shelter
-                        </button>
-                      </>
+                      <button className="btn btn-purple"
+                        onClick={() => handle(() => markInTransit(c._id), 'Marked as in transit!')}>
+                        Mark In Transit
+                      </button>
                     )}
+
                     {c.status === 'in_transit' && (
-                      <>
-                        <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>🚗 Currently in transit...</span>
-                        <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
-                          👥 Assign Vet & Shelter
-                        </button>
-                      </>
+                      <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>
+                        Currently in transit to vet...
+                      </span>
+                    )}
+
+                    {/* Assign Vet & Shelter — available from accepted to treatment done */}
+                    {['volunteer_accepted', 'in_transit', 'at_vet', 'treatment_done'].includes(c.status) && (
+                      <button className="btn btn-orange"
+                        onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
+                        Assign Vet & Shelter
+                      </button>
                     )}
                   </div>
                 </div>
@@ -161,31 +171,42 @@ export default function VolunteerDashboard() {
             </div>
           )}
 
-        {/* Assign Vet & Shelter Modal */}
+        {/* Assign Modal */}
         {modal && (
           <div className="modal-overlay" onClick={() => setModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3 className="modal-title">👥 Assign Vet & Shelter — {modal.caseId}</h3>
+              <h3 className="modal-title">Assign Vet & Shelter</h3>
+              <p className="modal-subtitle">
+                Case: <strong>{modal.caseId}</strong> — {modal.animalType} at {modal.location?.address}
+              </p>
 
               <div className="modal-form">
-                <p className="modal-section-label">🩺 Assign Veterinarian</p>
-                <div className="modal-assign-row">
-                  <select value={selectedVet} onChange={e => setSelectedVet(e.target.value)}>
-                    <option value="">Select veterinarian</option>
-                    {vets.map(v => <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>)}
-                  </select>
-                  <button className="btn btn-orange" onClick={handleAssignVet}>Assign</button>
+                <div>
+                  <p className="modal-section-label">Assign Veterinarian</p>
+                  <div className="modal-assign-row">
+                    <select value={selectedVet} onChange={e => setSelectedVet(e.target.value)}>
+                      <option value="">Select veterinarian...</option>
+                      {vets.map(v => (
+                        <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-orange" onClick={handleAssignVet}>Assign</button>
+                  </div>
                 </div>
 
                 <hr className="modal-divider" />
 
-                <p className="modal-section-label">🏠 Assign Shelter</p>
-                <div className="modal-assign-row">
-                  <select value={selectedShelter} onChange={e => setSelectedShelter(e.target.value)}>
-                    <option value="">Select shelter</option>
-                    {shelters.map(s => <option key={s._id} value={s._id}>{s.name} — {s.phone || s.email}</option>)}
-                  </select>
-                  <button className="btn btn-teal" onClick={handleAssignShelter}>Assign</button>
+                <div>
+                  <p className="modal-section-label">Assign Shelter</p>
+                  <div className="modal-assign-row">
+                    <select value={selectedShelter} onChange={e => setSelectedShelter(e.target.value)}>
+                      <option value="">Select shelter...</option>
+                      {shelters.map(s => (
+                        <option key={s._id} value={s._id}>{s.name} — {s.phone || s.email}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-teal" onClick={handleAssignShelter}>Assign</button>
+                  </div>
                 </div>
               </div>
 
