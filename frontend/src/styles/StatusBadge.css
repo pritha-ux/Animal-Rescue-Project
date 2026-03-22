@@ -9,6 +9,7 @@
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
+.badge-treatment_done { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
 .badge-reported          { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
 .badge-assigned          { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }

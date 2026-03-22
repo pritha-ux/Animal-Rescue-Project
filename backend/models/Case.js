@@ -13,7 +13,11 @@ const caseSchema = new mongoose.Schema({
   images: [{ type: String }],
   status: {
     type: String,
-    enum: ['reported','assigned','volunteer_accepted','volunteer_declined','in_transit','at_vet','at_shelter','adopted','returned_to_owner','closed'],
+    enum: [
+      'reported','assigned','volunteer_accepted','volunteer_declined',
+      'in_transit','at_vet','treatment_done','at_shelter',
+      'adopted','returned_to_owner','closed'
+    ],
     default: 'reported',
   },
   reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -31,6 +35,7 @@ const caseSchema = new mongoose.Schema({
     treatment: String,
     medications: String,
     notes: String,
+    documents: [{ type: String }],
     createdAt: { type: Date, default: Date.now },
   }],
   shelterDetails: {
@@ -49,7 +54,6 @@ const caseSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-// ✅ No 'next' parameter at all
 caseSchema.pre('save', async function () {
   if (!this.caseId) {
     const count = await mongoose.model('Case').countDocuments();

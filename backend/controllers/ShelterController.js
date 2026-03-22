@@ -1,0 +1,130 @@
+import Case from '../models/Case.js';
+import Notification from '../models/Notification.js';
+
+export const getShelterCases = async (req, res) => {
+  try {
+    const cases = await Case.find({ assignedShelter: req.user._id })
+      .populate('reportedBy', 'name phone')
+      .populate('assignedVet', 'name')
+      .populate('assignedVolunteer', 'name')
+      .sort({ createdAt: -1 });
+    res.json(cases);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const markAtShelter = async (req, res) => {
+  try {
+    const { cage_number, diet, health_status, notes } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+
+    caseData.status = 'at_shelter';
+    caseData.shelterDetails = { cage_number, diet, health_status, notes };
+    caseData.statusHistory.push({
+      status: 'at_shelter',
+      updatedBy: req.user._id,
+      note: 'Animal admitted to shelter',
+      timestamp: new Date(),
+    });
+    await caseData.save();
+
+    await Notification.create({
+      caseId: caseData._id,
+      recipient: caseData.reportedBy,
+      message: `The animal from case ${caseData.caseId} has been admitted to shelter.`,
+      type: 'status_update',
+    });
+
+    res.json({ message: 'Animal admitted to shelter', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateCareDetails = async (req, res) => {
+  try {
+    const { diet, health_status, notes } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+
+    caseData.shelterDetails = {
+      ...caseData.shelterDetails,
+      diet,
+      health_status,
+      notes
+    };
+    caseData.statusHistory.push({
+      status: caseData.status,
+      updatedBy: req.user._id,
+      note: 'Care details updated',
+      timestamp: new Date(),
+    });
+    await caseData.save();
+
+    res.json({ message: 'Care details updated', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const markAdopted = async (req, res) => {
+  try {
+    const { adopterName, adopterContact, notes } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+
+    caseData.status = 'adopted';
+    caseData.outcome = 'adopted';
+    caseData.outcomeDetails = { adopterName, adopterContact, notes };
+    caseData.statusHistory.push({
+      status: 'adopted',
+      updatedBy: req.user._id,
+      note: `Animal adopted by ${adopterName}`,
+      timestamp: new Date(),
+    });
+    await caseData.save();
+
+    await Notification.create({
+      caseId: caseData._id,
+      recipient: caseData.reportedBy,
+      message: `Great news! The animal from case ${caseData.caseId} has been adopted by ${adopterName}.`,
+      type: 'status_update',
+    });
+
+    res.json({ message: 'Animal marked as adopted', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const markReturnedToOwner = async (req, res) => {
+  try {
+    const { ownerName, ownerContact, notes } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+
+    caseData.status = 'returned_to_owner';
+    caseData.outcome = 'returned_to_owner';
+    caseData.outcomeDetails = { ownerName, ownerContact, notes };
+    caseData.statusHistory.push({
+      status: 'returned_to_owner',
+      updatedBy: req.user._id,
+      note: `Animal returned to owner: ${ownerName}`,
+      timestamp: new Date(),
+    });
+    await caseData.save();
+
+    await Notification.create({
+      caseId: caseData._id,
+      recipient: caseData.reportedBy,
+      message: `The animal from case ${caseData.caseId} has been returned to its owner.`,
+      type: 'status_update',
+    });
+
+    res.json({ message: 'Animal returned to owner', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
