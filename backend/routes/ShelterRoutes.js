@@ -1,12 +1,21 @@
 import express from 'express';
 import { protect, roleCheck } from '../middleware/auth.js';
-import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner } from '../controllers/shelterController.js';
+import {
+  getShelterCases,
+  markAtShelter,
+  updateCareDetails,
+  markAdopted,
+  markReturnedToOwner,
+} from '../controllers/ShelterController.js';
 
 const router = express.Router();
-router.get('/cases', protect, roleCheck('shelter_staff'), getShelterCases);
-router.put('/cases/:id/admit', protect, roleCheck('shelter_staff'), markAtShelter);
-router.put('/cases/:id/care', protect, roleCheck('shelter_staff'), updateCareDetails);
-router.put('/cases/:id/adopt', protect, roleCheck('shelter_staff'), markAdopted);
-router.put('/cases/:id/return', protect, roleCheck('shelter_staff'), markReturnedToOwner);
+
+router.use(protect, roleCheck('shelter_staff'));
+
+router.get('/cases', getShelterCases);
+router.put('/cases/:id/admit', markAtShelter);
+router.put('/cases/:id/care', updateCareDetails);
+router.put('/cases/:id/adopt', markAdopted);
+router.put('/cases/:id/return', markReturnedToOwner);
 
 export default router;
