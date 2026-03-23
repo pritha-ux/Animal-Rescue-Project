@@ -13,7 +13,6 @@ export const reportCase = async (req, res) => {
       location: { address, lat, lng },
       images,
       reportedBy: req.user._id,
-      reporterRole: req.user.role,   // ← save reporter role
       statusHistory: [{
         status: 'reported',
         note: `Case reported by ${req.user.role}`,

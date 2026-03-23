@@ -2,13 +2,65 @@ import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 
 // Vet: Get assigned cases
-export const getVetCases = async (req, res) => {
+export const acceptVetCase = async (req, res) => {
   try {
-    const cases = await Case.find({ assignedVet: req.user._id })
-      .populate('reportedBy', 'name')
-      .populate('assignedVolunteer', 'name phone')
-      .sort({ createdAt: -1 });
-    res.json(cases);
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+    if (String(caseData.assignedVet) !== String(req.user._id))
+      return res.status(403).json({ message: 'Not assigned to this case' });
+
+    caseData.status = 'vet_accepted';
+    caseData.statusHistory.push({
+      status: 'vet_accepted',
+      updatedBy: req.user._id,
+      note: 'Veterinarian accepted the case',
+      timestamp: new Date(),
+    });
+    await caseData.save();
+
+    await Notification.create({
+      caseId: caseData._id,
+      recipient: caseData.reportedBy,
+      message: `A veterinarian has accepted case ${caseData.caseId}.`,
+      type: 'status_update',
+    });
+
+    res.json({ message: 'Case accepted', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const declineVetCase = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+    if (String(caseData.assignedVet) !== String(req.user._id))
+      return res.status(403).json({ message: 'Not assigned to this case' });
+
+    // Clear vet assignment — goes back to volunteer to reassign
+    caseData.assignedVet = null;
+    caseData.status = 'vet_declined';
+    caseData.statusHistory.push({
+      status: 'vet_declined',
+      updatedBy: req.user._id,
+      note: reason || 'Veterinarian declined the case',
+      timestamp: new Date(),
+    });
+    await caseData.save();
+
+    // Notify volunteer to reassign
+    if (caseData.assignedVolunteer) {
+      await Notification.create({
+        caseId: caseData._id,
+        recipient: caseData.assignedVolunteer,
+        message: `Vet declined case ${caseData.caseId}. Please assign a new veterinarian.`,
+        type: 'alert',
+      });
+    }
+
+    res.json({ message: 'Case declined', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -37,6 +37,9 @@ export const getVetCases = () => API.get('/vet/cases');
 export const markAtVet = (id) => API.put(`/vet/cases/${id}/arrived`);
 export const addMedicalRecord = (id, data) => API.post(`/vet/cases/${id}/medical`, data);
 export const markTreatmentDone = (id) => API.put(`/vet/cases/${id}/treatment-done`);
+export const acceptVetCase = (id) => API.put(`/vet/cases/${id}/accept`);
+export const declineVetCase = (id, data) => API.put(`/vet/cases/${id}/decline`, data);
+
 
 // Shelter
 export const getShelterCases = () => API.get('/shelter/cases');
@@ -44,6 +47,8 @@ export const markAtShelter = (id, data) => API.put(`/shelter/cases/${id}/admit`,
 export const updateCareDetails = (id, data) => API.put(`/shelter/cases/${id}/care`, data);
 export const markAdopted = (id, data) => API.put(`/shelter/cases/${id}/adopt`, data);
 export const markReturnedToOwner = (id, data) => API.put(`/shelter/cases/${id}/return`, data);
+export const acceptShelterCase = (id) => API.put(`/shelter/cases/${id}/accept`);
+export const declineShelterCase = (id, data) => API.put(`/shelter/cases/${id}/decline`, data);
 
 // Admin
 export const getDashboardStats = () => API.get('/admin/dashboard');

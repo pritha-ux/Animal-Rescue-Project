@@ -1,6 +1,7 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 
+
 export const getAssignedCases = async (req, res) => {
   try {
     const cases = await Case.find({ assignedVolunteer: req.user._id })
@@ -8,6 +9,7 @@ export const getAssignedCases = async (req, res) => {
       .populate('assignedVet', 'name')
       .populate('assignedShelter', 'name')
       .sort({ createdAt: -1 });
+
     res.json(cases);
   } catch (err) {
     res.status(500).json({ message: err.message });
