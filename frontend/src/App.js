@@ -41,7 +41,11 @@ export default function App() {
           <Route path="/volunteer/*" element={<RoleRoute roles={['volunteer']}><VolunteerDashboard /></RoleRoute>} />
           <Route path="/vet/*" element={<RoleRoute roles={['veterinarian']}><VetDashboard /></RoleRoute>} />
           <Route path="/shelter/*" element={<RoleRoute roles={['shelter_staff']}><ShelterDashboard /></RoleRoute>} />
-          <Route path="/report" element={<RoleRoute roles={['public', 'admin']}><ReportCase /></RoleRoute>} />
+          <Route path="/report" element={
+          <RoleRoute roles={['public', 'volunteer', 'veterinarian', 'shelter_staff', 'admin']}>
+         <ReportCase />
+        </RoleRoute>
+} />
 
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>

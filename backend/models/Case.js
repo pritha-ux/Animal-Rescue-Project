@@ -20,6 +20,11 @@ const caseSchema = new mongoose.Schema({
     ],
     default: 'reported',
   },
+  reporterRole: {
+  type: String,
+  enum: ['public', 'volunteer', 'veterinarian', 'shelter_staff', 'admin'],
+  default: 'public',
+},
   reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedVolunteer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedVet: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

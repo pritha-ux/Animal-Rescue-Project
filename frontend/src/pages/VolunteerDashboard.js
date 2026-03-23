@@ -21,13 +21,9 @@ export default function VolunteerDashboard() {
   const [vets, setVets] = useState([]);
   const [shelters, setShelters] = useState([]);
   const [modal, setModal] = useState(null);
+  const [historyModal, setHistoryModal] = useState(null);
   const [selectedVet, setSelectedVet] = useState('');
   const [selectedShelter, setSelectedShelter] = useState('');
-  const [expandedHistory, setExpandedHistory] = useState({});
-
-  const toggleHistory = (id) => {
-    setExpandedHistory(prev => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const load = () => {
     getVolunteerCases().then(r => setCases(r.data)).finally(() => setLoading(false));
@@ -106,7 +102,6 @@ export default function VolunteerDashboard() {
                     <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
                   )}
 
-                  {/* Assigned team info */}
                   <div className="case-assign-info">
                     <p className="case-card-meta">
                       🩺 Vet: {c.assignedVet
@@ -120,31 +115,22 @@ export default function VolunteerDashboard() {
                     </p>
                   </div>
 
-                  {/* Collapsible Status History */}
-                  {c.statusHistory?.length > 0 && (
-                    <div className="history-wrapper">
-                      <button
-                        className="history-toggle"
-                        onClick={() => toggleHistory(c._id)}>
-                        <span>Status History ({c.statusHistory.length})</span>
-                        <span className="history-arrow">
-                          {expandedHistory[c._id] ? '▲' : '▼'}
-                        </span>
-                      </button>
-
-                      {expandedHistory[c._id] && (
-                        <div className="history-content">
-                          {c.statusHistory.map((h, i) => (
-                            <div key={i} className="history-item">
-                              <StatusBadge status={h.status} />
-                              <span className="history-time">{formatDateTime(h.timestamp)}</span>
-                              {h.note && <span className="history-note">— {h.note}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                  {/* Summary row */}
+                  <div className="case-summary-row">
+                    <div className="case-latest-status">
+                      <span className="summary-label">Latest Update:</span>
+                      <span className="summary-note">
+                        {c.statusHistory?.length > 0
+                          ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+                          : 'No updates yet'}
+                      </span>
                     </div>
-                  )}
+                    {c.statusHistory?.length > 0 && (
+                      <button className="history-chip" onClick={() => setHistoryModal(c)}>
+                        History ({c.statusHistory.length})
+                      </button>
+                    )}
+                  </div>
 
                   <div className="case-card-actions">
                     {c.status === 'assigned' && (
@@ -159,21 +145,18 @@ export default function VolunteerDashboard() {
                         </button>
                       </>
                     )}
-
                     {c.status === 'volunteer_accepted' && (
                       <button className="btn btn-purple"
                         onClick={() => handle(() => markInTransit(c._id), 'Marked as in transit!')}>
                         Mark In Transit
                       </button>
                     )}
-
                     {c.status === 'in_transit' && (
                       <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>
                         Currently in transit to vet...
                       </span>
                     )}
-
-                    {['volunteer_accepted', 'in_transit', 'at_vet', 'treatment_done'].includes(c.status) && (
+                    {['volunteer_accepted','in_transit','at_vet','treatment_done'].includes(c.status) && (
                       <button className="btn btn-orange"
                         onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
                         Assign Vet & Shelter
@@ -193,57 +176,82 @@ export default function VolunteerDashboard() {
               <p className="modal-subtitle">
                 Case: <strong>{modal.caseId}</strong> — {modal.animalType} at {modal.location?.address}
               </p>
-
               <div className="modal-form">
-                <div>
-                  {modal.assignedVet ? (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px' }}>
-                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Veterinarian Assigned</p>
-                      <p style={{ fontWeight: 700, color: '#1a1a2e' }}>✅ {modal.assignedVet.name}</p>
+                {modal.assignedVet ? (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Veterinarian Assigned</p>
+                    <p style={{ fontWeight: 700, color: '#1a1a2e' }}>✅ {modal.assignedVet.name}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="modal-section-label">Assign Veterinarian</p>
+                    <div className="modal-assign-row">
+                      <select value={selectedVet} onChange={e => setSelectedVet(e.target.value)}>
+                        <option value="">Select veterinarian...</option>
+                        {vets.map(v => <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>)}
+                      </select>
+                      <button className="btn btn-orange" onClick={handleAssignVet}>Assign</button>
                     </div>
-                  ) : (
-                    <div>
-                      <p className="modal-section-label">Assign Veterinarian</p>
-                      <div className="modal-assign-row">
-                        <select value={selectedVet} onChange={e => setSelectedVet(e.target.value)}>
-                          <option value="">Select veterinarian...</option>
-                          {vets.map(v => (
-                            <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>
-                          ))}
-                        </select>
-                        <button className="btn btn-orange" onClick={handleAssignVet}>Assign</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
+                  </div>
+                )}
                 <hr className="modal-divider" />
-
-                <div>
-                  {modal.assignedShelter ? (
-                    <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 10, padding: '12px 16px' }}>
-                      <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Shelter Assigned</p>
-                      <p style={{ fontWeight: 700, color: '#1a1a2e' }}>✅ {modal.assignedShelter.name}</p>
+                {modal.assignedShelter ? (
+                  <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 10, padding: '12px 16px' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Shelter Assigned</p>
+                    <p style={{ fontWeight: 700, color: '#1a1a2e' }}>✅ {modal.assignedShelter.name}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="modal-section-label">Assign Shelter</p>
+                    <div className="modal-assign-row">
+                      <select value={selectedShelter} onChange={e => setSelectedShelter(e.target.value)}>
+                        <option value="">Select shelter...</option>
+                        {shelters.map(s => <option key={s._id} value={s._id}>{s.name} — {s.phone || s.email}</option>)}
+                      </select>
+                      <button className="btn btn-teal" onClick={handleAssignShelter}>Assign</button>
                     </div>
-                  ) : (
-                    <div>
-                      <p className="modal-section-label">Assign Shelter</p>
-                      <div className="modal-assign-row">
-                        <select value={selectedShelter} onChange={e => setSelectedShelter(e.target.value)}>
-                          <option value="">Select shelter...</option>
-                          {shelters.map(s => (
-                            <option key={s._id} value={s._id}>{s.name} — {s.phone || s.email}</option>
-                          ))}
-                        </select>
-                        <button className="btn btn-teal" onClick={handleAssignShelter}>Assign</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-
               <div className="modal-actions">
                 <button className="btn btn-gray" onClick={() => setModal(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Modal */}
+        {historyModal && (
+          <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
+            <div className="modal history-modal" onClick={e => e.stopPropagation()}>
+              <div className="history-modal-header">
+                <div>
+                  <h3 className="modal-title">Case Timeline</h3>
+                  <p className="modal-subtitle">
+                    <span className="case-id">{historyModal.caseId}</span> — {historyModal.animalName || 'Unknown'} ({historyModal.animalType})
+                  </p>
+                </div>
+                <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
+              </div>
+              <div className="timeline-wrapper">
+                {historyModal.statusHistory.map((h, i) => (
+                  <div key={i} className="timeline-row">
+                    <div className="timeline-left">
+                      <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
+                      {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
+                    </div>
+                    <div className="timeline-body">
+                      <div className="timeline-top">
+                        <StatusBadge status={h.status} />
+                        <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
+                      </div>
+                      {h.note && <p className="timeline-note">{h.note}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-gray" onClick={() => setHistoryModal(null)}>Close</button>
               </div>
             </div>
           </div>

@@ -19,6 +19,7 @@ export default function VetDashboard() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [medModal, setMedModal] = useState(null);
+  const [historyModal, setHistoryModal] = useState(null);
   const [medData, setMedData] = useState({ diagnosis: '', treatment: '', medications: '', notes: '' });
   const [medFiles, setMedFiles] = useState([]);
 
@@ -83,24 +84,10 @@ export default function VetDashboard() {
                     <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
                   )}
 
-                  {/* Status History */}
-                  {c.statusHistory?.length > 0 && (
-                    <div className="status-history">
-                      <p className="history-label">Status History</p>
-                      {c.statusHistory.map((h, i) => (
-                        <div key={i} className="history-item">
-                          <StatusBadge status={h.status} />
-                          <span className="history-time">{formatDateTime(h.timestamp)}</span>
-                          {h.note && <span className="history-note">— {h.note}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
                   {/* Medical Records */}
                   {c.medicalRecords?.length > 0 && (
-                    <div style={{ marginTop: 14, background: '#fff7ed', borderRadius: 12, padding: '14px 18px', border: '1px solid #fed7aa' }}>
-                      <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#c2410c', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <div style={{ marginTop: 12, background: '#fff7ed', borderRadius: 12, padding: '12px 16px', border: '1px solid #fed7aa' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#c2410c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Medical Records ({c.medicalRecords.length})
                       </p>
                       {c.medicalRecords.map((m, i) => (
@@ -124,6 +111,23 @@ export default function VetDashboard() {
                       ))}
                     </div>
                   )}
+
+                  {/* Summary row */}
+                  <div className="case-summary-row">
+                    <div className="case-latest-status">
+                      <span className="summary-label">Latest Update:</span>
+                      <span className="summary-note">
+                        {c.statusHistory?.length > 0
+                          ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+                          : 'No updates yet'}
+                      </span>
+                    </div>
+                    {c.statusHistory?.length > 0 && (
+                      <button className="history-chip" onClick={() => setHistoryModal(c)}>
+                        History ({c.statusHistory.length})
+                      </button>
+                    )}
+                  </div>
 
                   <div className="case-card-actions">
                     {c.status === 'in_transit' && (
@@ -149,6 +153,7 @@ export default function VetDashboard() {
             </div>
           )}
 
+        {/* Medical Record Modal */}
         {medModal && (
           <div className="modal-overlay" onClick={() => setMedModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
@@ -162,7 +167,7 @@ export default function VetDashboard() {
                 </div>
                 <div>
                   <p className="modal-section-label">Treatment *</p>
-                  <input type="text" placeholder="e.g. Splint applied, rest required" value={medData.treatment}
+                  <input type="text" placeholder="e.g. Splint applied" value={medData.treatment}
                     onChange={e => setMedData({ ...medData, treatment: e.target.value })} />
                 </div>
                 <div>
@@ -190,6 +195,43 @@ export default function VetDashboard() {
               <div className="modal-actions">
                 <button className="btn btn-orange" onClick={handleAddMedical}>Save Record</button>
                 <button className="btn btn-gray" onClick={() => { setMedModal(null); setMedFiles([]); }}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Modal */}
+        {historyModal && (
+          <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
+            <div className="modal history-modal" onClick={e => e.stopPropagation()}>
+              <div className="history-modal-header">
+                <div>
+                  <h3 className="modal-title">Case Timeline</h3>
+                  <p className="modal-subtitle">
+                    <span className="case-id">{historyModal.caseId}</span> — {historyModal.animalName || 'Unknown'} ({historyModal.animalType})
+                  </p>
+                </div>
+                <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
+              </div>
+              <div className="timeline-wrapper">
+                {historyModal.statusHistory.map((h, i) => (
+                  <div key={i} className="timeline-row">
+                    <div className="timeline-left">
+                      <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
+                      {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
+                    </div>
+                    <div className="timeline-body">
+                      <div className="timeline-top">
+                        <StatusBadge status={h.status} />
+                        <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
+                      </div>
+                      {h.note && <p className="timeline-note">{h.note}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-gray" onClick={() => setHistoryModal(null)}>Close</button>
               </div>
             </div>
           </div>

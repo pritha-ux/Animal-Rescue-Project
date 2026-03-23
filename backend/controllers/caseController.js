@@ -4,24 +4,30 @@ import Notification from '../models/Notification.js';
 export const reportCase = async (req, res) => {
   try {
     const { animalName, animalType, description, address, lat, lng } = req.body;
-    const images = req.files ? req.files.map(f => f.path) : [];
+    const images = req.files ? req.files.map(f => f.filename) : [];
 
-    const newCase = await Case.create({
-      reportedBy: req.user._id,
+    const caseData = new Case({
       animalName,
       animalType,
       description,
-      location: { address, lat, lng }, // ✅ fixed - removed coordinates nesting
+      location: { address, lat, lng },
       images,
-      statusHistory: [{ status: 'reported', updatedBy: req.user._id, note: 'Case reported by public' }],
+      reportedBy: req.user._id,
+      reporterRole: req.user.role,   // ← save reporter role
+      statusHistory: [{
+        status: 'reported',
+        note: `Case reported by ${req.user.role}`,
+        timestamp: new Date(),
+      }]
     });
 
-    res.status(201).json({ message: 'Case reported successfully', case: newCase });
+    await caseData.save();
+    res.status(201).json({ message: 'Case reported successfully', case: caseData });
   } catch (err) {
-    console.error('❌ reportCase error:', err.message);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 export const trackCase = async (req, res) => {
   try {

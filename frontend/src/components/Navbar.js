@@ -5,11 +5,11 @@ import { getNotifications, markAllNotificationsRead } from '../api';
 import '../styles/Navbar.css';
 
 const roleLabels = {
-  admin: '🛡️ Admin',
-  public: '🌍 Public',
-  volunteer: '🙋 Volunteer',
-  veterinarian: '🩺 Vet',
-  shelter_staff: '🏠 Shelter',
+  admin: 'Admin',
+  public: 'Public',
+  volunteer: 'Volunteer',
+  veterinarian: 'Vet',
+  shelter_staff: 'Shelter',
 };
 
 const dashRoutes = {
@@ -46,7 +46,8 @@ export default function Navbar() {
       </Link>
 
       <div className="navbar-right">
-        {user?.role === 'public' && (
+        {/* Show Report button for everyone except admin */}
+        {user?.role !== 'admin' && (
           <Link to="/report" className="navbar-report-btn">+ Report Animal</Link>
         )}
 
@@ -79,8 +80,11 @@ export default function Navbar() {
         </div>
 
         <div className="navbar-user">
-          <span className="navbar-role">{roleLabels[user?.role]}</span>
-          <span className="navbar-name">{user?.name}</span>
+          <div className="navbar-avatar">{user?.name?.[0]?.toUpperCase()}</div>
+          <div className="navbar-user-info">
+            <span className="navbar-name">{user?.name}</span>
+            <span className="navbar-role">{roleLabels[user?.role]}</span>
+          </div>
         </div>
 
         <button className="navbar-logout" onClick={() => { logoutUser(); navigate('/login'); }}>

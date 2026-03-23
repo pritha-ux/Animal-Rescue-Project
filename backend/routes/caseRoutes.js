@@ -10,9 +10,9 @@ import {
 const router = express.Router();
 
 // Public: report and track
-router.post('/report', protect, roleCheck('public', 'admin'), upload.array('images', 5), reportCase);
 router.get('/track/:caseId', protect, trackCase);
 router.get('/my', protect, getMyCases);
+router.post('/report', protect, roleCheck('public', 'volunteer', 'veterinarian', 'shelter_staff', 'admin'), upload.array('images', 5), reportCase);
 
 // Admin
 router.get('/', protect, roleCheck('admin'), getAllCases);
