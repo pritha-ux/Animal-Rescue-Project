@@ -78,17 +78,32 @@ export default function ShelterDashboard() {
                   )}
 
                   <div className="case-card-actions">
-                    {!['at_shelter', 'adopted', 'returned_to_owner'].includes(c.status) && (
+                    {c.status === 'treatment_done' && (
+                      <>
+                        <button className="btn btn-green"
+                          onClick={() => handle(() => acceptShelterCase(c._id), 'Case accepted!')}>
+                          Accept Case
+                        </button>
+                        <button className="btn btn-red"
+                          onClick={() => handle(() => declineShelterCase(c._id, { reason: 'No capacity' }), 'Case declined')}>
+                          Decline
+                        </button>
+                      </>
+                    )}
+                    {c.status === 'shelter_accepted' && (
                       <button className="btn btn-teal" onClick={() => openModal('admit', c._id)}>
-                        🏠 Admit to Shelter
+                        Admit to Shelter
                       </button>
                     )}
                     {c.status === 'at_shelter' && (
                       <>
-                        <button className="btn btn-blue" onClick={() => openModal('care', c._id)}>✏️ Update Care</button>
-                        <button className="btn btn-green" onClick={() => openModal('adopt', c._id)}>🎉 Mark Adopted</button>
-                        <button className="btn btn-purple" onClick={() => openModal('return', c._id)}>🔄 Return to Owner</button>
+                        <button className="btn btn-blue" onClick={() => openModal('care', c._id)}>Update Care</button>
+                        <button className="btn btn-green" onClick={() => openModal('adopt', c._id)}>Mark Adopted</button>
+                        <button className="btn btn-purple" onClick={() => openModal('return', c._id)}>Return to Owner</button>
                       </>
+                    )}
+                    {['adopted', 'returned_to_owner'].includes(c.status) && (
+                      <span style={{ color: '#15803d', fontWeight: 700, fontSize: '0.88rem' }}>Case Completed</span>
                     )}
                   </div>
                 </div>

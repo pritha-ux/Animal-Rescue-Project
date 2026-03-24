@@ -5,8 +5,6 @@ import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
-
-
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -61,10 +59,15 @@ export default function AdminDashboard() {
     { label: 'At Shelter', value: stats.statusBreakdown.atShelter, cls: 'teal' },
     { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
   ] : [];
-  
-
 
   if (loading) return <div className="loading">Loading dashboard...</div>;
+
+  // Statuses where volunteer is already actively working — no reassign allowed
+  const noReassignStatuses = [
+    'volunteer_accepted', 'in_transit', 'at_vet', 'treatment_done',
+    'shelter_accepted', 'at_shelter', 'adopted', 'returned_to_owner', 'closed'
+  ];
+  const completedStatuses = ['closed', 'adopted', 'returned_to_owner'];
 
   return (
     <div className="dashboard-page">
@@ -115,7 +118,6 @@ export default function AdminDashboard() {
                 <div className="mini-stat-label">Shelter Staff</div>
               </div>
             </div>
-
 
             <h3 className="card-title">Recent Cases</h3>
             <div className="table-wrapper">
@@ -185,14 +187,23 @@ export default function AdminDashboard() {
                       <td>{c.assignedVolunteer?.name || <span style={{ color: '#d1d5db' }}>Not assigned</span>}</td>
                       <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatDateTime(c.createdAt)}</td>
                       <td>
-                        <button className="action-link blue" onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>
-                          Assign
-                        </button>
-                        {!['closed','adopted','returned_to_owner'].includes(c.status) && (
+                        {/* Assign — only for cases not yet actively in progress */}
+                        {!noReassignStatuses.includes(c.status) && (
+                          <button className="action-link blue"
+                            onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>
+                            Assign
+                          </button>
+                        )}
+                        {/* Close — only for non-completed cases */}
+                        {!completedStatuses.includes(c.status) && (
                           <button className="action-link red" style={{ marginLeft: 8 }}
                             onClick={() => closeCase(c._id, { note: 'Closed by admin' }).then(() => { setMsg('Case closed!'); refreshCases(); })}>
                             Close
                           </button>
+                        )}
+                        {/* Completed label */}
+                        {completedStatuses.includes(c.status) && (
+                          <span style={{ color: '#15803d', fontWeight: 600, fontSize: '0.82rem' }}>Completed</span>
                         )}
                       </td>
                     </tr>
@@ -239,7 +250,6 @@ export default function AdminDashboard() {
               <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 16 }}>
                 Case: <strong>{selectedCase.caseId}</strong> — {selectedCase.animalType} at {selectedCase.location?.address}
               </p>
-
               <div className="modal-form">
                 <p className="modal-section-label">Select Volunteer</p>
                 <select value={selectedVol} onChange={e => setSelectedVol(e.target.value)}
@@ -250,7 +260,6 @@ export default function AdminDashboard() {
                   ))}
                 </select>
               </div>
-
               <div className="modal-actions">
                 <button className="btn btn-orange" onClick={doAssignVolunteer}>Assign Volunteer</button>
                 <button className="btn btn-gray" onClick={() => setSelectedCase(null)}>Cancel</button>

@@ -21,3 +21,7 @@
 .badge-adopted           { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 .badge-returned_to_owner { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .badge-closed            { background: #f9fafb; color: #4b5563; border: 1px solid #e5e7eb; }
+.badge-vet_accepted      { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-vet_declined      { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-shelter_accepted  { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+.badge-shelter_declined  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }

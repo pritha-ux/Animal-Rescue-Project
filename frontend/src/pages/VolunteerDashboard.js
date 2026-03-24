@@ -156,7 +156,7 @@ export default function VolunteerDashboard() {
                         Currently in transit to vet...
                       </span>
                     )}
-                    {['volunteer_accepted','in_transit','at_vet','treatment_done'].includes(c.status) && (
+                    {['volunteer_accepted', 'in_transit', 'at_vet', 'vet_accepted', 'vet_declined', 'treatment_done','shelter_accepted', 'shelter_declined'].includes(c.status) && (
                       <button className="btn btn-orange"
                         onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
                         Assign Vet & Shelter
