@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, getMyCases } from '../api';
+import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, getMyCases, acceptVetCase, declineVetCase } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
@@ -221,24 +221,44 @@ export default function VetDashboard() {
                     </div>
 
                     <div className="case-card-actions">
-                      {c.status === 'in_transit' && (
-                        <button className="btn btn-orange"
-                          onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>
-                          Mark Animal Arrived
-                        </button>
-                      )}
-                      {(c.status === 'at_vet' || c.status === 'in_transit') && (
-                        <button className="btn btn-blue" onClick={() => { setMedModal(c._id); setMedFiles([]); }}>
-                          Add Medical Record
-                        </button>
-                      )}
-                      {c.status === 'at_vet' && (
-                        <button className="btn btn-green"
-                          onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>
-                          Treatment Complete
-                        </button>
-                      )}
-                    </div>
+  {/* Accept / Decline — when newly assigned */}
+  {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
+    <>
+      <button className="btn btn-green"
+        onClick={() => handle(() => acceptVetCase(c._id), 'Case accepted!')}>
+        Accept Case
+      </button>
+      <button className="btn btn-red"
+        onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined — volunteer notified')}>
+        Decline
+      </button>
+    </>
+  )}
+
+  {/* Mark arrived — after accepting */}
+  {c.status === 'vet_accepted' && (
+    <button className="btn btn-orange"
+      onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>
+      Mark Animal Arrived
+    </button>
+  )}
+
+  {/* Add medical record */}
+  {['vet_accepted', 'at_vet'].includes(c.status) && (
+    <button className="btn btn-blue"
+      onClick={() => { setMedModal(c._id); setMedFiles([]); }}>
+      Add Medical Record
+    </button>
+  )}
+
+  {/* Treatment complete */}
+  {c.status === 'at_vet' && (
+    <button className="btn btn-green"
+      onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>
+      Treatment Complete
+    </button>
+  )}
+</div>
                   </div>
                 ))}
               </div>

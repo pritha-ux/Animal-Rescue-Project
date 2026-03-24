@@ -2,6 +2,17 @@ import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 
 // Vet: Get assigned cases
+export const getVetCases = async (req, res) => {
+  try {
+    const cases = await Case.find({ assignedVet: req.user._id })
+      .populate('reportedBy', 'name')
+      .populate('assignedVolunteer', 'name phone')
+      .sort({ createdAt: -1 });
+    res.json(cases);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 export const acceptVetCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);

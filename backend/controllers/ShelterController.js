@@ -1,6 +1,18 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
 
+export const getShelterCases = async (req, res) => {
+  try {
+    const cases = await Case.find({ assignedShelter: req.user._id })
+      .populate('reportedBy', 'name phone')
+      .populate('assignedVet', 'name')
+      .populate('assignedVolunteer', 'name')
+      .sort({ createdAt: -1 });
+    res.json(cases);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 export const acceptShelterCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);

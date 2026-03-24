@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, roleCheck } from '../middleware/auth.js';
-import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase } from '../controllers/shelterController.js';
+import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase } from '../controllers/ShelterController.js';
 
 
 const router = express.Router();

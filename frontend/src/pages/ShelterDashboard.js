@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner } from '../api';
+import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';

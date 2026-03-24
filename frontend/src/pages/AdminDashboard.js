@@ -5,6 +5,8 @@ import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
+
+
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -59,6 +61,8 @@ export default function AdminDashboard() {
     { label: 'At Shelter', value: stats.statusBreakdown.atShelter, cls: 'teal' },
     { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
   ] : [];
+  
+
 
   if (loading) return <div className="loading">Loading dashboard...</div>;
 
@@ -111,6 +115,7 @@ export default function AdminDashboard() {
                 <div className="mini-stat-label">Shelter Staff</div>
               </div>
             </div>
+
 
             <h3 className="card-title">Recent Cases</h3>
             <div className="table-wrapper">
