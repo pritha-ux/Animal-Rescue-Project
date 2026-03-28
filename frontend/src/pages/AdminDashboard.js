@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedVol, setSelectedVol] = useState('');
   const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
@@ -40,15 +41,29 @@ export default function AdminDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const refreshCases = () => getAllCases({ status: statusFilter }).then(r => setCases(r.data.cases));
+  const refreshCases = async () => {
+    const [casesRes, statsRes] = await Promise.all([
+      getAllCases({ status: statusFilter }),
+      getDashboardStats(),
+    ]);
+    setCases(casesRes.data.cases);
+    setStats(statsRes.data);
+  };
 
   const doAssignVolunteer = async () => {
     if (!selectedVol) return;
-    await assignVolunteer(selectedCase._id, { volunteerId: selectedVol });
-    setMsg('Volunteer assigned successfully!');
-    setSelectedCase(null);
-    setSelectedVol('');
-    refreshCases();
+    setAssigning(true);
+    try {
+      await assignVolunteer(selectedCase._id, { volunteerId: selectedVol });
+      setMsg('Volunteer assigned successfully!');
+      setSelectedCase(null);
+      setSelectedVol('');
+      await refreshCases();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Failed to assign volunteer. Please try again.');
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const statCards = stats ? [
@@ -60,14 +75,14 @@ export default function AdminDashboard() {
     { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
   ] : [];
 
-  if (loading) return <div className="loading">Loading dashboard...</div>;
-
-  // Statuses where volunteer is already actively working — no reassign allowed
   const noReassignStatuses = [
-    'volunteer_accepted', 'in_transit', 'at_vet', 'treatment_done',
-    'shelter_accepted', 'at_shelter', 'adopted', 'returned_to_owner', 'closed'
+    'volunteer_accepted', 'in_transit', 'vet_accepted', 'vet_declined',
+    'at_vet', 'treatment_done', 'shelter_accepted', 'shelter_declined',
+    'at_shelter', 'adopted', 'returned_to_owner', 'closed'
   ];
   const completedStatuses = ['closed', 'adopted', 'returned_to_owner'];
+
+  if (loading) return <div className="loading">Loading dashboard...</div>;
 
   return (
     <div className="dashboard-page">
@@ -159,7 +174,12 @@ export default function AdminDashboard() {
                   getAllCases({ status: e.target.value }).then(r => setCases(r.data.cases));
                 }}>
                 <option value="">All Status</option>
-                {['reported','assigned','volunteer_accepted','volunteer_declined','in_transit','at_vet','at_shelter','adopted','returned_to_owner','closed'].map(s => (
+                {[
+                  'reported', 'assigned', 'volunteer_accepted', 'volunteer_declined',
+                  'in_transit', 'vet_accepted', 'vet_declined', 'at_vet', 'treatment_done',
+                  'shelter_accepted', 'shelter_declined', 'at_shelter',
+                  'adopted', 'returned_to_owner', 'closed'
+                ].map(s => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                 ))}
               </select>
@@ -187,21 +207,22 @@ export default function AdminDashboard() {
                       <td>{c.assignedVolunteer?.name || <span style={{ color: '#d1d5db' }}>Not assigned</span>}</td>
                       <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatDateTime(c.createdAt)}</td>
                       <td>
-                        {/* Assign — only for cases not yet actively in progress */}
                         {!noReassignStatuses.includes(c.status) && (
                           <button className="action-link blue"
                             onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>
                             Assign
                           </button>
                         )}
-                        {/* Close — only for non-completed cases */}
                         {!completedStatuses.includes(c.status) && (
                           <button className="action-link red" style={{ marginLeft: 8 }}
-                            onClick={() => closeCase(c._id, { note: 'Closed by admin' }).then(() => { setMsg('Case closed!'); refreshCases(); })}>
+                            onClick={async () => {
+                              await closeCase(c._id, { note: 'Closed by admin' });
+                              setMsg('Case closed!');
+                              await refreshCases();
+                            }}>
                             Close
                           </button>
                         )}
-                        {/* Completed label */}
                         {completedStatuses.includes(c.status) && (
                           <span style={{ color: '#15803d', fontWeight: 600, fontSize: '0.82rem' }}>Completed</span>
                         )}
@@ -261,7 +282,9 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <div className="modal-actions">
-                <button className="btn btn-orange" onClick={doAssignVolunteer}>Assign Volunteer</button>
+                <button className="btn btn-orange" onClick={doAssignVolunteer} disabled={assigning}>
+                  {assigning ? 'Assigning...' : 'Assign Volunteer'}
+                </button>
                 <button className="btn btn-gray" onClick={() => setSelectedCase(null)}>Cancel</button>
               </div>
             </div>
@@ -270,4 +293,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
+}git 
