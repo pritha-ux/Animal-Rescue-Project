@@ -465,201 +465,129 @@
   gap: 20px;
   flex-wrap: wrap;
 }
-/* Collapsible History */
-.history-wrapper {
-  margin-top: 14px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid #f3f4f6;
-}
-
-.history-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: #f9fafb;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #374151;
-  cursor: pointer;
-  transition: background 0.15s;
-  border: none;
-}
-
-.history-toggle:hover {
-  background: #fff7ed;
-  color: #ea580c;
-}
-
-.history-arrow {
-  font-size: 0.7rem;
-  color: #9ca3af;
-  transition: transform 0.2s;
-}
-
-.history-content {
-  padding: 12px 16px;
-  background: #fff;
-  border-top: 1px solid #f3f4f6;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
 .case-assign-info .case-card-meta { margin-bottom: 0; }
-/* Case Summary Row */
-.case-summary-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-  padding: 10px 14px;
-  background: #fafafa;
-  border-radius: 10px;
-  border: 1px solid #f3f4f6;
-  flex-wrap: wrap;
-  gap: 8px;
+
+/* Medical Records Section */
+.medical-records-section {
+  margin-top: 14px;
+  background: linear-gradient(135deg, #fff7ed, #fff);
+  border-radius: 12px;
+  padding: 14px 18px;
+  border: 1px solid #fed7aa;
 }
 
-.case-latest-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-
-.summary-label {
-  font-size: 0.78rem;
+.medical-records-title {
   font-weight: 700;
-  color: #9ca3af;
+  font-size: 0.78rem;
+  color: #c2410c;
+  margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  white-space: nowrap;
 }
 
-.summary-note {
-  font-size: 0.82rem;
-  color: #374151;
-  font-style: italic;
+/* Dashboard Stats Row */
+.dash-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-.history-chip {
-  background: #fff7ed;
-  color: #ea580c;
-  border: 1.5px solid #fed7aa;
-  padding: 5px 14px;
-  border-radius: 999px;
+.dash-stat-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.2s;
+}
+.dash-stat-box:hover { transform: translateY(-2px); }
+
+.dash-stat-num {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.dash-stat-label {
   font-size: 0.78rem;
-  font-weight: 700;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dash-stat-box.blue .dash-stat-num { color: #2563eb; }
+.dash-stat-box.blue { border-top: 3px solid #2563eb; }
+.dash-stat-box.orange .dash-stat-num { color: #ea580c; }
+.dash-stat-box.orange { border-top: 3px solid #ea580c; }
+.dash-stat-box.green .dash-stat-num { color: #16a34a; }
+.dash-stat-box.green { border-top: 3px solid #16a34a; }
+.dash-stat-box.purple .dash-stat-num { color: #7c3aed; }
+.dash-stat-box.purple { border-top: 3px solid #7c3aed; }
+.dash-stat-box.teal .dash-stat-num { color: #0d9488; }
+.dash-stat-box.teal { border-top: 3px solid #0d9488; }
+
+/* Quick Action Cards */
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.quick-action-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
   cursor: pointer;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   transition: all 0.2s;
-  white-space: nowrap;
+}
+.quick-action-card:hover {
+  border-color: #fed7aa;
+  box-shadow: 0 4px 16px rgba(234,88,12,0.1);
+  transform: translateY(-2px);
 }
 
-.history-chip:hover {
-  background: #ea580c;
-  color: #fff;
-  border-color: #ea580c;
-  transform: translateY(-1px);
-}
-
-/* History Modal */
-.history-modal {
-  max-width: 520px;
-  max-height: 80vh;
+.quick-action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
 }
 
-.history-modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 20px;
+.quick-action-info { flex: 1; }
+.quick-action-title { font-weight: 700; font-size: 0.95rem; color: #1a1a2e; margin-bottom: 2px; }
+.quick-action-sub { font-size: 0.8rem; color: #6b7280; }
+
+.quick-action-arrow {
+  font-size: 1.1rem;
+  color: #ea580c;
+  font-weight: 700;
 }
 
-.history-modal-close {
-  background: #f3f4f6;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  color: #6b7280;
+/* Back Button */
+.back-btn {
+  background: none;
+  color: #ea580c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 6px 0;
   cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
+  border: none;
+  transition: opacity 0.2s;
 }
-.history-modal-close:hover { background: #e5e7eb; color: #1a1a2e; }
-
-.timeline-wrapper {
-  overflow-y: auto;
-  flex: 1;
-  padding-right: 4px;
-}
-
-.timeline-row {
-  display: flex;
-  gap: 14px;
-  position: relative;
-}
-
-.timeline-left {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.timeline-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #e5e7eb;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px #e5e7eb;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.timeline-dot.active {
-  background: #ea580c;
-  box-shadow: 0 0 0 3px rgba(234,88,12,0.2);
-}
-
-.timeline-line {
-  width: 2px;
-  flex: 1;
-  background: linear-gradient(to bottom, #e5e7eb, #f3f4f6);
-  margin: 4px 0;
-  min-height: 20px;
-}
-
-.timeline-body {
-  padding-bottom: 20px;
-  flex: 1;
-}
-
-.timeline-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-
-.timeline-time {
-  font-size: 0.76rem;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.timeline-note {
-  font-size: 0.82rem;
-  color: #6b7280;
-  font-style: italic;
-  margin-top: 2px;
-  line-height: 1.5;
-}
+.back-btn:hover { opacity: 0.7; }
