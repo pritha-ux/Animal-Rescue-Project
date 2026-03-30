@@ -112,27 +112,36 @@ export const addMedicalRecord = async (req, res) => {
     const documents = req.files ? req.files.map(f => f.filename) : [];
 
     const caseData = await Case.findById(req.params.id);
-    if (!caseData) return res.status(404).json({ message: 'Case not found' });
-    if (String(caseData.assignedVet) !== String(req.user._id))
+
+    if (!caseData) {
+      return res.status(404).json({ message: 'Case not found' });
+    }
+
+    if (String(caseData.assignedVet) !== String(req.user._id)) {
       return res.status(403).json({ message: 'Not assigned to this case' });
+    }
 
-    // ← allow any vet-related status
-    if (!['vet_accepted', 'at_vet', 'in_transit'].includes(caseData.status))
-      return res.status(400).json({ message: 'Cannot add medical record at this stage' });
+    if (!['vet_accepted', 'at_vet', 'in_transit', 'treatment_done'].includes(caseData.status)) {
+      return res.status(400).json({ message: 'Cannot update medical record at this stage' });
+    }
 
-    caseData.medicalRecords.push({
+    const newRecord = {
       diagnosis,
       treatment,
       medications,
       notes,
       documents,
       updatedBy: req.user._id,
-    });
+      updatedAt: new Date(),
+    };
+
+    caseData.medicalRecords.push(newRecord);
 
     caseData.statusHistory.push({
       status: caseData.status,
       updatedBy: req.user._id,
-      note: `Medical record added: ${diagnosis}`,
+      note: `Medical update added: ${diagnosis}`,
+      timestamp: new Date(),
     });
 
     await caseData.save();
@@ -140,16 +149,20 @@ export const addMedicalRecord = async (req, res) => {
     await Notification.create({
       caseId: caseData._id,
       recipient: caseData.reportedBy,
-      message: `Medical update for case ${caseData.caseId}: ${diagnosis}`,
+      message: `New medical update for case ${caseData.caseId}: ${diagnosis}`,
       type: 'status_update',
     });
 
-    res.json({ message: 'Medical record added', case: caseData });
+    res.json({
+      message: 'Medical record updated successfully',
+      medicalRecords: caseData.medicalRecords,
+      case: caseData
+    });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-};
-
+};git 
 // Vet: Mark treatment done, ready for shelter
 export const markTreatmentDone = async (req, res) => {
   try {
