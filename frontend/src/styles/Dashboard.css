@@ -210,6 +210,8 @@
   padding: 2px 6px;
   border-radius: 4px;
   transition: background 0.15s;
+  cursor: pointer;
+  border: none;
 }
 .alert-close:hover { background: rgba(0,0,0,0.05); }
 
@@ -267,6 +269,107 @@
 .case-card-meta { font-size: 0.82rem; color: #9ca3af; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
 .case-card-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  margin-bottom: 2px;
+}
+
+.section-subtitle {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+/* View All Button */
+.view-all-btn {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1.5px solid #fed7aa;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.view-all-btn:hover {
+  background: #ea580c;
+  color: #fff;
+  border-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234,88,12,0.25);
+}
+
+/* Case Summary Row (latest + history chip) */
+.case-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+}
+
+.case-latest-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #c2410c;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.summary-note {
+  font-size: 0.82rem;
+  color: #6b7280;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* History Chip Button */
+.history-chip {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.history-chip:hover {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+  transform: translateY(-1px);
+}
+
 /* Buttons */
 .btn {
   padding: 10px 20px;
@@ -275,6 +378,8 @@
   font-weight: 700;
   transition: all 0.2s;
   letter-spacing: 0.2px;
+  cursor: pointer;
+  border: none;
 }
 
 .btn:hover { transform: translateY(-1px); }
@@ -309,6 +414,8 @@
   padding: 5px 10px;
   border-radius: 6px;
   transition: all 0.15s;
+  cursor: pointer;
+  border: none;
 }
 .action-link.blue { color: #2563eb; }
 .action-link.blue:hover { background: #eff6ff; }
