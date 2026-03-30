@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getVolunteerCases, acceptCase, declineCase, markInTransit, getVolunteerStaff, assignVetByVolunteer, assignShelterByVolunteer } from '../api';
+import { getVolunteerCases, acceptCase, declineCase, markInTransit, getVolunteerStaff, assignVetByVolunteer, assignShelterByVolunteer, getMyCases } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
@@ -16,6 +16,7 @@ const formatDateTime = (dateStr) => {
 
 export default function VolunteerDashboard() {
   const [cases, setCases] = useState([]);
+  const [myCases, setMyCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [vets, setVets] = useState([]);
@@ -24,163 +25,357 @@ export default function VolunteerDashboard() {
   const [historyModal, setHistoryModal] = useState(null);
   const [selectedVet, setSelectedVet] = useState('');
   const [selectedShelter, setSelectedShelter] = useState('');
+  const [view, setView] = useState('dashboard'); // 'dashboard' | 'assigned' | 'reported'
 
-  const load = () => {
-    getVolunteerCases().then(r => setCases(r.data)).finally(() => setLoading(false));
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [assignedRes, myRes] = await Promise.all([
+        getVolunteerCases(),
+        getMyCases(),
+      ]);
+      setCases(assignedRes.data);
+      setMyCases(myRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
     getVolunteerStaff().then(r => {
-      setVets(r.data.vets);
-      setShelters(r.data.shelters);
+      setVets(r.data.vets || []);
+      setShelters(r.data.shelters || []);
     }).catch(() => {});
   }, []);
 
   const handle = async (fn, successMsg) => {
-    await fn();
-    setMsg(successMsg);
-    load();
+    try {
+      await fn();
+      setMsg(successMsg);
+      await load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Something went wrong.');
+    }
   };
 
   const handleAssignVet = async () => {
-    if (!selectedVet) return;
-    await assignVetByVolunteer(modal._id, { vetId: selectedVet });
-    setMsg('Veterinarian assigned!');
-    setModal(null);
-    setSelectedVet('');
-    load();
+    if (!selectedVet || !modal?._id) return;
+    try {
+      await assignVetByVolunteer(modal._id, { vetId: selectedVet });
+      setMsg('Veterinarian assigned!');
+      setModal(null);
+      setSelectedVet('');
+      await load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Failed to assign vet.');
+    }
   };
 
   const handleAssignShelter = async () => {
-    if (!selectedShelter) return;
-    await assignShelterByVolunteer(modal._id, { shelterId: selectedShelter });
-    setMsg('Shelter assigned!');
-    setModal(null);
-    setSelectedShelter('');
-    load();
+    if (!selectedShelter || !modal?._id) return;
+    try {
+      await assignShelterByVolunteer(modal._id, { shelterId: selectedShelter });
+      setMsg('Shelter assigned!');
+      setModal(null);
+      setSelectedShelter('');
+      await load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Failed to assign shelter.');
+    }
   };
+
+  const CaseCard = ({ c }) => (
+    <div className="case-card">
+      <div className="case-card-header">
+        <div className="case-card-id-row">
+          <span className="case-id">{c.caseId}</span>
+          <StatusBadge status={c.status} />
+        </div>
+        <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
+      </div>
+      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+      <p className="case-card-desc">{c.description}</p>
+      <p className="case-card-meta">📍 {c.location?.address}</p>
+      {c.reportedBy && (
+        <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
+      )}
+      <div className="case-assign-info">
+        <p className="case-card-meta">
+          🩺 Vet: {c.assignedVet ? <strong>{c.assignedVet.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
+        </p>
+        <p className="case-card-meta">
+          🏠 Shelter: {c.assignedShelter ? <strong>{c.assignedShelter.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
+        </p>
+      </div>
+      <div className="case-summary-row">
+        <div className="case-latest-status">
+          <span className="summary-label">Latest:</span>
+          <span className="summary-note">
+            {c.statusHistory?.length > 0
+              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+              : 'No updates yet'}
+          </span>
+        </div>
+        {c.statusHistory?.length > 0 && (
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>
+            History ({c.statusHistory.length})
+          </button>
+        )}
+      </div>
+      {view === 'assigned' && (
+        <div className="case-card-actions">
+          {c.status === 'assigned' && (
+            <>
+              <button className="btn btn-green" onClick={() => handle(() => acceptCase(c._id), 'Case accepted!')}>Accept Case</button>
+              <button className="btn btn-red" onClick={() => handle(() => declineCase(c._id, { reason: 'Cannot attend' }), 'Case declined')}>Decline</button>
+            </>
+          )}
+          {c.status === 'volunteer_accepted' && (
+            <button className="btn btn-purple" onClick={() => handle(() => markInTransit(c._id), 'Marked as in transit!')}>Mark In Transit</button>
+          )}
+          {c.status === 'in_transit' && (
+            <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>Currently in transit...</span>
+          )}
+          {['volunteer_accepted', 'in_transit', 'at_vet', 'vet_accepted', 'vet_declined', 'treatment_done', 'shelter_declined'].includes(c.status) && (
+            <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
+              Assign Vet & Shelter
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="dashboard-page">
       <Navbar />
       <div className="dashboard-container">
+
+        {/* HEADER */}
         <div className="dashboard-header">
-          <h1 className="dashboard-title">Volunteer Dashboard</h1>
+          <div>
+            <h1 className="dashboard-title">Volunteer Dashboard</h1>
+            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>
+              Welcome back! Here's your overview.
+            </p>
+          </div>
         </div>
 
         {msg && (
           <div className="alert-success">
-            {msg}
-            <button className="alert-close" onClick={() => setMsg('')}>✕</button>
+            {msg} <button className="alert-close" onClick={() => setMsg('')}>✕</button>
           </div>
         )}
 
-        {loading ? <div className="loading">Loading your cases...</div>
-          : cases.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">🙋</div>
-              <h3>No cases assigned yet</h3>
-              <p>Cases assigned to you will appear here.</p>
+        {/* DASHBOARD VIEW */}
+        {view === 'dashboard' && (
+          <>
+            {/* Stats Row */}
+            <div className="dash-stats-row">
+              <div className="dash-stat-box blue">
+                <span className="dash-stat-num">{cases.length}</span>
+                <span className="dash-stat-label">Assigned Cases</span>
+              </div>
+              <div className="dash-stat-box purple">
+                <span className="dash-stat-num">{cases.filter(c => c.status === 'assigned').length}</span>
+                <span className="dash-stat-label">Pending Accept</span>
+              </div>
+              <div className="dash-stat-box orange">
+                <span className="dash-stat-num">{cases.filter(c => c.status === 'in_transit').length}</span>
+                <span className="dash-stat-label">In Transit</span>
+              </div>
+              <div className="dash-stat-box green">
+                <span className="dash-stat-num">{myCases.length}</span>
+                <span className="dash-stat-label">I Reported</span>
+              </div>
             </div>
-          ) : (
-            <div className="case-list">
-              {cases.map(c => (
-                <div key={c._id} className="case-card">
-                  <div className="case-card-header">
-                    <div className="case-card-id-row">
-                      <span className="case-id">{c.caseId}</span>
-                      <StatusBadge status={c.status} />
-                    </div>
-                    <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
-                  </div>
 
-                  <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
-                  <p className="case-card-desc">{c.description}</p>
-                  <p className="case-card-meta">📍 {c.location?.address}</p>
-                  {c.reportedBy && (
-                    <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
-                  )}
-
-                  <div className="case-assign-info">
-                    <p className="case-card-meta">
-                      🩺 Vet: {c.assignedVet
-                        ? <strong>{c.assignedVet.name}</strong>
-                        : <span style={{ color: '#ea580c' }}>Not assigned</span>}
-                    </p>
-                    <p className="case-card-meta">
-                      🏠 Shelter: {c.assignedShelter
-                        ? <strong>{c.assignedShelter.name}</strong>
-                        : <span style={{ color: '#ea580c' }}>Not assigned</span>}
-                    </p>
-                  </div>
-
-                  {/* Summary row */}
-                  <div className="case-summary-row">
-                    <div className="case-latest-status">
-                      <span className="summary-label">Latest Update:</span>
-                      <span className="summary-note">
-                        {c.statusHistory?.length > 0
-                          ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-                          : 'No updates yet'}
-                      </span>
-                    </div>
-                    {c.statusHistory?.length > 0 && (
-                      <button className="history-chip" onClick={() => setHistoryModal(c)}>
-                        History ({c.statusHistory.length})
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="case-card-actions">
-                    {c.status === 'assigned' && (
-                      <>
-                        <button className="btn btn-green"
-                          onClick={() => handle(() => acceptCase(c._id), 'Case accepted!')}>
-                          Accept Case
-                        </button>
-                        <button className="btn btn-red"
-                          onClick={() => handle(() => declineCase(c._id, { reason: 'Cannot attend' }), 'Case declined')}>
-                          Decline
-                        </button>
-                      </>
-                    )}
-                    {c.status === 'volunteer_accepted' && (
-                      <button className="btn btn-purple"
-                        onClick={() => handle(() => markInTransit(c._id), 'Marked as in transit!')}>
-                        Mark In Transit
-                      </button>
-                    )}
-                    {c.status === 'in_transit' && (
-                      <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>
-                        Currently in transit to vet...
-                      </span>
-                    )}
-                    {['volunteer_accepted', 'in_transit', 'at_vet', 'vet_accepted', 'vet_declined', 'treatment_done','shelter_accepted', 'shelter_declined'].includes(c.status) && (
-                      <button className="btn btn-orange"
-                        onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
-                        Assign Vet & Shelter
-                      </button>
-                    )}
-                  </div>
+            {/* Quick Action Cards */}
+            <div className="quick-action-grid">
+              <div className="quick-action-card" onClick={() => setView('assigned')}>
+                <div className="quick-action-icon" style={{ background: '#eff6ff' }}>📋</div>
+                <div className="quick-action-info">
+                  <p className="quick-action-title">Assigned Cases</p>
+                  <p className="quick-action-sub">{cases.length} cases assigned to you</p>
                 </div>
-              ))}
+                <span className="quick-action-arrow">→</span>
+              </div>
+              <div className="quick-action-card" onClick={() => setView('reported')}>
+                <div className="quick-action-icon" style={{ background: '#faf5ff' }}>🐾</div>
+                <div className="quick-action-info">
+                  <p className="quick-action-title">Cases I Reported</p>
+                  <p className="quick-action-sub">{myCases.length} cases you reported</p>
+                </div>
+                <span className="quick-action-arrow">→</span>
+              </div>
             </div>
-          )}
+
+            {/* Recent Assigned Cases Preview */}
+            {cases.length > 0 && (
+              <>
+                <div className="section-header" style={{ marginTop: 28 }}>
+                  <div>
+                    <h2 className="section-title">Recent Assigned Cases</h2>
+                    <p className="section-subtitle">Showing latest 2 cases</p>
+                  </div>
+                  <button className="view-all-btn" onClick={() => setView('assigned')}>
+                    View All ({cases.length})
+                  </button>
+                </div>
+                <div className="case-list">
+                  {cases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}
+                </div>
+              </>
+            )}
+
+            {/* Recent Reported Cases Preview */}
+            {myCases.length > 0 && (
+              <>
+                <div className="section-header" style={{ marginTop: 28 }}>
+                  <div>
+                    <h2 className="section-title">Recently Reported by Me</h2>
+                    <p className="section-subtitle">Showing latest 2 cases</p>
+                  </div>
+                  <button className="view-all-btn" onClick={() => setView('reported')}>
+                    View All ({myCases.length})
+                  </button>
+                </div>
+                <div className="case-list">
+                  {myCases.slice(0, 2).map(c => (
+                    <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
+                      <div className="case-card-header">
+                        <div className="case-card-id-row">
+                          <span className="case-id">{c.caseId}</span>
+                          <StatusBadge status={c.status} />
+                        </div>
+                        <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
+                      </div>
+                      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+                      <p className="case-card-desc">{c.description}</p>
+                      <p className="case-card-meta">📍 {c.location?.address}</p>
+                      <div className="case-summary-row">
+                        <div className="case-latest-status">
+                          <span className="summary-label">Latest:</span>
+                          <span className="summary-note">
+                            {c.statusHistory?.length > 0
+                              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+                              : 'No updates yet'}
+                          </span>
+                        </div>
+                        {c.statusHistory?.length > 0 && (
+                          <button className="history-chip" onClick={() => setHistoryModal(c)}>
+                            History ({c.statusHistory.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {cases.length === 0 && myCases.length === 0 && !loading && (
+              <div className="empty-state">
+                <div className="empty-icon">🙋</div>
+                <h3>No activity yet</h3>
+                <p>Cases assigned to you will appear here.</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ASSIGNED CASES VIEW */}
+        {view === 'assigned' && (
+          <>
+            <div className="section-header">
+              <div>
+                <button className="back-btn" onClick={() => setView('dashboard')}>← Back</button>
+                <h2 className="section-title" style={{ marginTop: 8 }}>All Assigned Cases</h2>
+                <p className="section-subtitle">{cases.length} cases assigned to you</p>
+              </div>
+            </div>
+            {loading ? <div className="loading">Loading...</div>
+              : cases.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📋</div>
+                  <h3>No assigned cases</h3>
+                  <p>Cases assigned to you will appear here.</p>
+                </div>
+              ) : (
+                <div className="case-list">
+                  {cases.map(c => <CaseCard key={c._id} c={c} />)}
+                </div>
+              )}
+          </>
+        )}
+
+        {/* REPORTED CASES VIEW */}
+        {view === 'reported' && (
+          <>
+            <div className="section-header">
+              <div>
+                <button className="back-btn" onClick={() => setView('dashboard')}>← Back</button>
+                <h2 className="section-title" style={{ marginTop: 8 }}>Cases I Reported</h2>
+                <p className="section-subtitle">{myCases.length} cases you reported</p>
+              </div>
+            </div>
+            {loading ? <div className="loading">Loading...</div>
+              : myCases.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🐾</div>
+                  <h3>No reported cases</h3>
+                  <p>Cases you report will appear here.</p>
+                </div>
+              ) : (
+                <div className="case-list">
+                  {myCases.map(c => (
+                    <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
+                      <div className="case-card-header">
+                        <div className="case-card-id-row">
+                          <span className="case-id">{c.caseId}</span>
+                          <StatusBadge status={c.status} />
+                        </div>
+                        <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
+                      </div>
+                      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+                      <p className="case-card-desc">{c.description}</p>
+                      <p className="case-card-meta">📍 {c.location?.address}</p>
+                      <div className="case-summary-row">
+                        <div className="case-latest-status">
+                          <span className="summary-label">Latest:</span>
+                          <span className="summary-note">
+                            {c.statusHistory?.length > 0
+                              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+                              : 'No updates yet'}
+                          </span>
+                        </div>
+                        {c.statusHistory?.length > 0 && (
+                          <button className="history-chip" onClick={() => setHistoryModal(c)}>
+                            History ({c.statusHistory.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </>
+        )}
 
         {/* Assign Modal */}
         {modal && (
           <div className="modal-overlay" onClick={() => setModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
               <h3 className="modal-title">Assign Vet & Shelter</h3>
-              <p className="modal-subtitle">
-                Case: <strong>{modal.caseId}</strong> — {modal.animalType} at {modal.location?.address}
-              </p>
+              <p className="modal-subtitle">Case: <strong>{modal.caseId}</strong> — {modal.animalType}</p>
               <div className="modal-form">
                 {modal.assignedVet ? (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px' }}>
-                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Veterinarian Assigned</p>
-                    <p style={{ fontWeight: 700, color: '#1a1a2e' }}>✅ {modal.assignedVet.name}</p>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', marginBottom: 4 }}>Veterinarian Assigned</p>
+                    <p style={{ fontWeight: 700 }}>✅ {modal.assignedVet.name}</p>
                   </div>
                 ) : (
                   <div>
@@ -197,8 +392,8 @@ export default function VolunteerDashboard() {
                 <hr className="modal-divider" />
                 {modal.assignedShelter ? (
                   <div style={{ background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: 10, padding: '12px 16px' }}>
-                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>Shelter Assigned</p>
-                    <p style={{ fontWeight: 700, color: '#1a1a2e' }}>✅ {modal.assignedShelter.name}</p>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', marginBottom: 4 }}>Shelter Assigned</p>
+                    <p style={{ fontWeight: 700 }}>✅ {modal.assignedShelter.name}</p>
                   </div>
                 ) : (
                   <div>
