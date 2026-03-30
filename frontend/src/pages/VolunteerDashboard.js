@@ -14,6 +14,26 @@ const formatDateTime = (dateStr) => {
   });
 };
 
+// Reusable timestamp block used in every card
+const CardTimestamps = ({ createdAt, statusHistory }) => {
+  const latestTimestamp = statusHistory?.length > 0
+    ? statusHistory[statusHistory.length - 1].timestamp
+    : null;
+
+  return (
+    <div className="case-card-dates">
+      <span className="case-card-date">
+        <span className="date-label">Reported:</span> {formatDateTime(createdAt)}
+      </span>
+      {latestTimestamp && latestTimestamp !== createdAt && (
+        <span className="case-card-date">
+          <span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}
+        </span>
+      )}
+    </div>
+  );
+};
+
 export default function VolunteerDashboard() {
   const [cases, setCases] = useState([]);
   const [myCases, setMyCases] = useState([]);
@@ -94,7 +114,8 @@ export default function VolunteerDashboard() {
           <span className="case-id">{c.caseId}</span>
           <StatusBadge status={c.status} />
         </div>
-        <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
+        {/* ── Reported + Updated timestamps ── */}
+        <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
       </div>
       <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
       <p className="case-card-desc">{c.description}</p>
@@ -146,6 +167,38 @@ export default function VolunteerDashboard() {
           )}
         </div>
       )}
+    </div>
+  );
+
+  // Reusable reported case card (used in dashboard preview + reported view)
+  const ReportedCard = ({ c }) => (
+    <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
+      <div className="case-card-header">
+        <div className="case-card-id-row">
+          <span className="case-id">{c.caseId}</span>
+          <StatusBadge status={c.status} />
+        </div>
+        {/* ── Reported + Updated timestamps ── */}
+        <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
+      </div>
+      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+      <p className="case-card-desc">{c.description}</p>
+      <p className="case-card-meta">📍 {c.location?.address}</p>
+      <div className="case-summary-row">
+        <div className="case-latest-status">
+          <span className="summary-label">Latest:</span>
+          <span className="summary-note">
+            {c.statusHistory?.length > 0
+              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+              : 'No updates yet'}
+          </span>
+        </div>
+        {c.statusHistory?.length > 0 && (
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>
+            History ({c.statusHistory.length})
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -244,35 +297,7 @@ export default function VolunteerDashboard() {
                   </button>
                 </div>
                 <div className="case-list">
-                  {myCases.slice(0, 2).map(c => (
-                    <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
-                      <div className="case-card-header">
-                        <div className="case-card-id-row">
-                          <span className="case-id">{c.caseId}</span>
-                          <StatusBadge status={c.status} />
-                        </div>
-                        <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
-                      </div>
-                      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
-                      <p className="case-card-desc">{c.description}</p>
-                      <p className="case-card-meta">📍 {c.location?.address}</p>
-                      <div className="case-summary-row">
-                        <div className="case-latest-status">
-                          <span className="summary-label">Latest:</span>
-                          <span className="summary-note">
-                            {c.statusHistory?.length > 0
-                              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-                              : 'No updates yet'}
-                          </span>
-                        </div>
-                        {c.statusHistory?.length > 0 && (
-                          <button className="history-chip" onClick={() => setHistoryModal(c)}>
-                            History ({c.statusHistory.length})
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  {myCases.slice(0, 2).map(c => <ReportedCard key={c._id} c={c} />)}
                 </div>
               </>
             )}
@@ -331,35 +356,7 @@ export default function VolunteerDashboard() {
                 </div>
               ) : (
                 <div className="case-list">
-                  {myCases.map(c => (
-                    <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
-                      <div className="case-card-header">
-                        <div className="case-card-id-row">
-                          <span className="case-id">{c.caseId}</span>
-                          <StatusBadge status={c.status} />
-                        </div>
-                        <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
-                      </div>
-                      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
-                      <p className="case-card-desc">{c.description}</p>
-                      <p className="case-card-meta">📍 {c.location?.address}</p>
-                      <div className="case-summary-row">
-                        <div className="case-latest-status">
-                          <span className="summary-label">Latest:</span>
-                          <span className="summary-note">
-                            {c.statusHistory?.length > 0
-                              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-                              : 'No updates yet'}
-                          </span>
-                        </div>
-                        {c.statusHistory?.length > 0 && (
-                          <button className="history-chip" onClick={() => setHistoryModal(c)}>
-                            History ({c.statusHistory.length})
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  {myCases.map(c => <ReportedCard key={c._id} c={c} />)}
                 </div>
               )}
           </>
