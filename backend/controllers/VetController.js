@@ -162,7 +162,7 @@ export const addMedicalRecord = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-};git 
+};
 // Vet: Mark treatment done, ready for shelter
 export const markTreatmentDone = async (req, res) => {
   try {

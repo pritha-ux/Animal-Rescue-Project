@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyCases } from '../api';
 import Navbar from '../components/Navbar';
-import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Cases.css';
 
 export default function PublicDashboard() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [trackId, setTrackId] = useState('');
+  const [selectedCase, setSelectedCase] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,23 +24,8 @@ export default function PublicDashboard() {
           <button className="btn btn-green" onClick={() => navigate('/report')}>+ Report Animal</button>
         </div>
 
-        {/* Quick Track */}
-        <div className="card">
-          <h2 className="card-title">🔍 Quick Track</h2>
-          <div className="track-search-row">
-            <input className="track-input" type="text" value={trackId}
-              onChange={e => setTrackId(e.target.value)}
-              placeholder="Enter Case ID e.g. CASE-0001"
-              style={{ fontFamily: 'monospace', border: '1.5px solid #d1d5db', borderRadius: 10, padding: '10px 14px', fontSize: '0.92rem', flex: 1 }}
-            />
-            <button className="track-btn" onClick={() => trackId && navigate(`/track/${trackId.toUpperCase()}`)}>
-              Track
-            </button>
-          </div>
-        </div>
-
-        {/* Cases */}
-        <h2 className="card-title" style={{ marginBottom: 12 }}>📋 My Reported Cases</h2>
+        {/* Cases List */}
+        <h2 className="card-title">📋 My Reported Cases</h2>
         {loading ? (
           <div className="loading">Loading your cases...</div>
         ) : cases.length === 0 ? (
@@ -51,22 +35,50 @@ export default function PublicDashboard() {
             <button className="btn btn-green" onClick={() => navigate('/report')}>Report an Animal</button>
           </div>
         ) : (
-          <div className="case-list">
-            {cases.map(c => (
-              <div key={c._id} className="case-card" onClick={() => navigate(`/track/${c.caseId}`)}
-                style={{ cursor: 'pointer' }}>
-                <div className="case-card-header">
-                  <div className="case-card-id-row">
-                    <span className="case-id">{c.caseId}</span>
-                    <StatusBadge status={c.status} />
-                  </div>
-                  <span className="case-card-date">{new Date(c.createdAt).toLocaleDateString()}</span>
+          <div className="cases-container">
+            {/* Timeline */}
+            <div className="timeline">
+              {cases.map(c => (
+                <div
+                  key={c._id}
+                  className={`timeline-item ${selectedCase?._id === c._id ? 'active' : ''}`}
+                  onClick={() => setSelectedCase(c)}
+                >
+                  <h4>{c.animalName} ({c.animalType})</h4>
+                  <p>{new Date(c.createdAt).toLocaleDateString()}</p>
                 </div>
-                <p className="case-card-title">{c.animalName} ({c.animalType})</p>
-                <p className="case-card-desc">{c.description}</p>
-                <p className="case-card-meta">📍 {c.location?.address}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Medical Records */}
+            <div className="records">
+              {selectedCase ? (
+                selectedCase.medicalRecords.length === 0 ? (
+                  <p>No medical records available for this case.</p>
+                ) : (
+                  selectedCase.medicalRecords.map((rec, idx) => (
+                    <div
+                      key={idx}
+                      className={`record-card ${rec.expanded ? 'expanded' : ''}`}
+                      onClick={() => {
+                        selectedCase.medicalRecords[idx].expanded = !rec.expanded;
+                        setSelectedCase({ ...selectedCase });
+                      }}
+                    >
+                      <h5>{rec.title} - {rec.date}</h5>
+                      <div className="details">
+                        <p><strong>Diagnosis:</strong> {rec.diagnosis}</p>
+                        <p><strong>Treatment:</strong> {rec.treatment}</p>
+                        <p><strong>Medications:</strong> {rec.medications}</p>
+                        {rec.notes && <p><strong>Notes:</strong> {rec.notes}</p>}
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : (
+                <p>Select a case from the timeline to see medical records.</p>
+              )}
+            </div>
           </div>
         )}
       </div>
