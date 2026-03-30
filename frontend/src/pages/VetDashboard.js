@@ -5,6 +5,8 @@ import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
+const CASES_PER_PAGE = 2;
+
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -14,7 +16,40 @@ const formatDateTime = (dateStr) => {
   });
 };
 
-const PREVIEW_COUNT = 4;
+const CardTimestamps = ({ createdAt, statusHistory }) => {
+  const latestTimestamp = statusHistory?.length > 0
+    ? statusHistory[statusHistory.length - 1].timestamp
+    : null;
+  return (
+    <div className="case-card-dates">
+      <span className="case-card-date">
+        <span className="date-label">Reported:</span> {formatDateTime(createdAt)}
+      </span>
+      {latestTimestamp && latestTimestamp !== createdAt && (
+        <span className="case-card-date">
+          <span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}
+        </span>
+      )}
+    </div>
+  );
+};
+
+const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="pagination-row">
+      <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>
+        ← Prev
+      </button>
+      <span className="pagination-info">
+        Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+      </span>
+      <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>
+        Next →
+      </button>
+    </div>
+  );
+};
 
 export default function VetDashboard() {
   const [cases, setCases] = useState([]);
@@ -25,18 +60,57 @@ export default function VetDashboard() {
   const [historyModal, setHistoryModal] = useState(null);
   const [medData, setMedData] = useState({ diagnosis: '', treatment: '', medications: '', notes: '' });
   const [medFiles, setMedFiles] = useState([]);
-  const [showAll, setShowAll] = useState(false);
-  const [showMyCases, setShowMyCases] = useState(false);
+  const [view, setView] = useState('dashboard'); // 'dashboard' | 'assigned' | 'reported'
 
-  const load = () => getVetCases().then(r => setCases(r.data)).finally(() => setLoading(false));
+  // Pagination
+  const [assignedPage, setAssignedPage] = useState(1);
+  const [reportedPage, setReportedPage] = useState(1);
+
+  // Sort most recently updated first
+  const sortedCases = [...cases].sort((a, b) => {
+    const aTime = a.statusHistory?.length > 0 ? new Date(a.statusHistory[a.statusHistory.length - 1].timestamp) : new Date(a.createdAt);
+    const bTime = b.statusHistory?.length > 0 ? new Date(b.statusHistory[b.statusHistory.length - 1].timestamp) : new Date(b.createdAt);
+    return bTime - aTime;
+  });
+
+  const sortedMyCases = [...myCases].sort((a, b) => {
+    const aTime = a.statusHistory?.length > 0 ? new Date(a.statusHistory[a.statusHistory.length - 1].timestamp) : new Date(a.createdAt);
+    const bTime = b.statusHistory?.length > 0 ? new Date(b.statusHistory[b.statusHistory.length - 1].timestamp) : new Date(b.createdAt);
+    return bTime - aTime;
+  });
+
+  const assignedTotalPages = Math.ceil(sortedCases.length / CASES_PER_PAGE);
+  const reportedTotalPages = Math.ceil(sortedMyCases.length / CASES_PER_PAGE);
+
+  const pagedAssigned = sortedCases.slice(
+    (assignedPage - 1) * CASES_PER_PAGE,
+    assignedPage * CASES_PER_PAGE
+  );
+  const pagedReported = sortedMyCases.slice(
+    (reportedPage - 1) * CASES_PER_PAGE,
+    reportedPage * CASES_PER_PAGE
+  );
+
+  const load = () => {
+    setLoading(true);
+    getVetCases().then(r => setCases(r.data)).finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     load();
     getMyCases().then(r => setMyCases(r.data)).catch(() => {});
   }, []);
 
+  const goToView = (v) => {
+    setView(v);
+    setAssignedPage(1);
+    setReportedPage(1);
+  };
+
   const handle = async (fn, successMsg) => {
-    await fn(); setMsg(successMsg); load();
+    await fn();
+    setMsg(successMsg);
+    load();
   };
 
   const handleAddMedical = async () => {
@@ -52,17 +126,149 @@ export default function VetDashboard() {
     load();
   };
 
-  const displayedCases = showAll ? cases : cases.slice(0, PREVIEW_COUNT);
+  // Pending = needs accept/decline action
+  const pendingCases = sortedCases.filter(c =>
+    ['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status)
+  );
+  const activeCases = sortedCases.filter(c =>
+    ['vet_accepted', 'at_vet'].includes(c.status)
+  );
+
+  const CaseCard = ({ c }) => (
+    <div className="case-card">
+      <div className="case-card-header">
+        <div className="case-card-id-row">
+          <span className="case-id">{c.caseId}</span>
+          <StatusBadge status={c.status} />
+        </div>
+        <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
+      </div>
+
+      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+      <p className="case-card-desc">{c.description}</p>
+      <p className="case-card-meta">📍 {c.location?.address}</p>
+      {c.reportedBy && (
+        <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
+      )}
+
+      {/* Actions — shown at top of interactions, before records */}
+      <div className="case-card-actions">
+        {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
+          <>
+            <button className="btn btn-green"
+              onClick={() => handle(() => acceptVetCase(c._id), 'Case accepted!')}>
+              Accept Case
+            </button>
+            <button className="btn btn-red"
+              onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined — volunteer notified')}>
+              Decline
+            </button>
+          </>
+        )}
+        {c.status === 'vet_accepted' && (
+          <button className="btn btn-orange"
+            onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>
+            Mark Animal Arrived
+          </button>
+        )}
+        {['vet_accepted', 'at_vet'].includes(c.status) && (
+          <button className="btn btn-blue"
+            onClick={() => { setMedModal(c._id); setMedFiles([]); }}>
+            Add Medical Record
+          </button>
+        )}
+        {c.status === 'at_vet' && (
+          <button className="btn btn-green"
+            onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>
+            Treatment Complete
+          </button>
+        )}
+      </div>
+
+      {/* Medical Records */}
+      {c.medicalRecords?.length > 0 && (
+        <div style={{ marginTop: 12, background: '#fff7ed', borderRadius: 12, padding: '12px 16px', border: '1px solid #fed7aa' }}>
+          <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#c2410c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Medical Records ({c.medicalRecords.length})
+          </p>
+          {c.medicalRecords.map((m, i) => (
+            <div key={i} className="medical-item">
+              <strong>{m.diagnosis}</strong>
+              <p>Treatment: {m.treatment}</p>
+              {m.medications && <p>Medications: {m.medications}</p>}
+              {m.notes && <p>{m.notes}</p>}
+              {m.documents?.length > 0 && m.documents.map((doc, j) => (
+                <a key={j} href={`http://localhost:5000/uploads/${doc}`} target="_blank" rel="noreferrer"
+                  style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>
+                  📄 Document {j + 1}
+                </a>
+              ))}
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>{formatDateTime(m.createdAt)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="case-summary-row">
+        <div className="case-latest-status">
+          <span className="summary-label">Latest:</span>
+          <span className="summary-note">
+            {c.statusHistory?.length > 0
+              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+              : 'No updates yet'}
+          </span>
+        </div>
+        {c.statusHistory?.length > 0 && (
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>
+            History ({c.statusHistory.length})
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const ReportedCard = ({ c }) => (
+    <div className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
+      <div className="case-card-header">
+        <div className="case-card-id-row">
+          <span className="case-id">{c.caseId}</span>
+          <StatusBadge status={c.status} />
+        </div>
+        <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
+      </div>
+      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+      <p className="case-card-desc">{c.description}</p>
+      <p className="case-card-meta">📍 {c.location?.address}</p>
+      <div className="case-summary-row">
+        <div className="case-latest-status">
+          <span className="summary-label">Latest:</span>
+          <span className="summary-note">
+            {c.statusHistory?.length > 0
+              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+              : 'No updates yet'}
+          </span>
+        </div>
+        {c.statusHistory?.length > 0 && (
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>
+            History ({c.statusHistory.length})
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="dashboard-page">
       <Navbar />
       <div className="dashboard-container">
+
         <div className="dashboard-header">
-          <h1 className="dashboard-title">Veterinarian Dashboard</h1>
-          {cases.length > 0 && (
-            <span className="total-cases-badge">{cases.length} Assigned Cases</span>
-          )}
+          <div>
+            <h1 className="dashboard-title">Veterinarian Dashboard</h1>
+            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>
+              Welcome back! Here's your overview.
+            </p>
+          </div>
         </div>
 
         {msg && (
@@ -72,207 +278,166 @@ export default function VetDashboard() {
           </div>
         )}
 
-        {/* MY REPORTED CASES */}
-        {myCases.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Cases I Reported</h2>
-                <p className="section-subtitle">{myCases.length} case(s) you reported</p>
+        {/* DASHBOARD VIEW */}
+        {view === 'dashboard' && (
+          <>
+            {/* Stats Row */}
+            <div className="dash-stats-row">
+              <div className="dash-stat-box blue">
+                <span className="dash-stat-num">{cases.length}</span>
+                <span className="dash-stat-label">Assigned Cases</span>
               </div>
-              {myCases.length > 3 && (
-                <button
-                  className={`view-all-btn ${showMyCases ? 'active' : ''}`}
-                  onClick={() => setShowMyCases(!showMyCases)}>
-                  {showMyCases ? '← Show Less' : `View All (${myCases.length})`}
-                </button>
-              )}
+              <div className="dash-stat-box orange">
+                <span className="dash-stat-num">{pendingCases.length}</span>
+                <span className="dash-stat-label">Pending Accept</span>
+              </div>
+              <div className="dash-stat-box teal">
+                <span className="dash-stat-num">{activeCases.length}</span>
+                <span className="dash-stat-label">Active / At Clinic</span>
+              </div>
+              <div className="dash-stat-box purple">
+                <span className="dash-stat-num">{myCases.length}</span>
+                <span className="dash-stat-label">I Reported</span>
+              </div>
             </div>
 
-            <div className="case-list">
-              {(showMyCases ? myCases : myCases.slice(0, 3)).map(c => (
-                <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
-                  <div className="case-card-header">
-                    <div className="case-card-id-row">
-                      <span className="case-id">{c.caseId}</span>
-                      <StatusBadge status={c.status} />
-                    </div>
-                    <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
-                  </div>
-                  <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
-                  <p className="case-card-desc">{c.description}</p>
-                  <p className="case-card-meta">📍 {c.location?.address}</p>
-                  <div className="case-summary-row">
-                    <div className="case-latest-status">
-                      <span className="summary-label">Latest:</span>
-                      <span className="summary-note">
-                        {c.statusHistory?.length > 0
-                          ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-                          : 'No updates yet'}
-                      </span>
-                    </div>
-                    {c.statusHistory?.length > 0 && (
-                      <button className="history-chip" onClick={() => setHistoryModal(c)}>
-                        History ({c.statusHistory.length})
-                      </button>
-                    )}
-                  </div>
+            {/* Quick Action Cards */}
+            <div className="quick-action-grid">
+              <div className="quick-action-card" onClick={() => goToView('assigned')}>
+                <div className="quick-action-icon" style={{ background: '#fff7ed' }}>🩺</div>
+                <div className="quick-action-info">
+                  <p className="quick-action-title">Assigned Cases</p>
+                  <p className="quick-action-sub">{cases.length} cases assigned to you</p>
                 </div>
-              ))}
+                <span className="quick-action-arrow">→</span>
+              </div>
+              <div className="quick-action-card" onClick={() => goToView('reported')}>
+                <div className="quick-action-icon" style={{ background: '#faf5ff' }}>🐾</div>
+                <div className="quick-action-info">
+                  <p className="quick-action-title">Cases I Reported</p>
+                  <p className="quick-action-sub">{myCases.length} cases you reported</p>
+                </div>
+                <span className="quick-action-arrow">→</span>
+              </div>
             </div>
 
-            {!showMyCases && myCases.length > 3 && (
-              <div className="show-more-footer">
-                <p>{myCases.length - 3} more reported cases</p>
-                <button className="view-all-btn" onClick={() => setShowMyCases(true)}>View All</button>
+            {/* Recent Assigned Cases Preview */}
+            {sortedCases.length > 0 && (
+              <>
+                <div className="section-header" style={{ marginTop: 28 }}>
+                  <div>
+                    <h2 className="section-title">Recent Assigned Cases</h2>
+                    <p className="section-subtitle">Showing latest 2 cases</p>
+                  </div>
+                  <button className="view-all-btn" onClick={() => goToView('assigned')}>
+                    View All ({sortedCases.length})
+                  </button>
+                </div>
+                <div className="case-list">
+                  {sortedCases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}
+                </div>
+              </>
+            )}
+
+            {/* Recent Reported Cases Preview */}
+            {sortedMyCases.length > 0 && (
+              <>
+                <div className="section-header" style={{ marginTop: 28 }}>
+                  <div>
+                    <h2 className="section-title">Recently Reported by Me</h2>
+                    <p className="section-subtitle">Showing latest 2 cases</p>
+                  </div>
+                  <button className="view-all-btn" onClick={() => goToView('reported')}>
+                    View All ({sortedMyCases.length})
+                  </button>
+                </div>
+                <div className="case-list">
+                  {sortedMyCases.slice(0, 2).map(c => <ReportedCard key={c._id} c={c} />)}
+                </div>
+              </>
+            )}
+
+            {cases.length === 0 && myCases.length === 0 && !loading && (
+              <div className="empty-state">
+                <div className="empty-icon">🩺</div>
+                <h3>No activity yet</h3>
+                <p>Cases assigned to you will appear here.</p>
               </div>
             )}
-          </div>
+          </>
         )}
 
-        {/* DIVIDER */}
-        {myCases.length > 0 && cases.length > 0 && (
-          <div style={{ borderTop: '2px dashed #f3f4f6', margin: '8px 0 28px' }} />
-        )}
-
-        {/* ASSIGNED CASES */}
-        {loading ? <div className="loading">Loading cases...</div>
-          : cases.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">🩺</div>
-              <h3>No cases assigned yet</h3>
-              <p>Cases assigned to you will appear here.</p>
+        {/* ASSIGNED CASES VIEW */}
+        {view === 'assigned' && (
+          <>
+            <div className="section-header">
+              <div>
+                <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
+                <h2 className="section-title" style={{ marginTop: 8 }}>All Assigned Cases</h2>
+                <p className="section-subtitle">
+                  {sortedCases.length} cases · Page {assignedPage} of {assignedTotalPages || 1}
+                </p>
+              </div>
             </div>
-          ) : (
-            <>
-              <div className="section-header">
-                <div>
-                  <h2 className="section-title">{showAll ? 'All Assigned Cases' : 'Recent Assigned Cases'}</h2>
-                  <p className="section-subtitle">
-                    {showAll
-                      ? `Showing all ${cases.length} cases`
-                      : `Showing ${Math.min(PREVIEW_COUNT, cases.length)} of ${cases.length} cases`}
-                  </p>
-                </div>
-                {cases.length > PREVIEW_COUNT && (
-                  <button
-                    className={`view-all-btn ${showAll ? 'active' : ''}`}
-                    onClick={() => setShowAll(!showAll)}>
-                    {showAll ? '← Show Less' : `View All Cases (${cases.length})`}
-                  </button>
-                )}
+            {loading ? (
+              <div className="loading">Loading cases...</div>
+            ) : sortedCases.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🩺</div>
+                <h3>No assigned cases</h3>
+                <p>Cases assigned to you will appear here.</p>
               </div>
-
-              <div className="case-list">
-                {displayedCases.map(c => (
-                  <div key={c._id} className="case-card">
-                    <div className="case-card-header">
-                      <div className="case-card-id-row">
-                        <span className="case-id">{c.caseId}</span>
-                        <StatusBadge status={c.status} />
-                      </div>
-                      <span className="case-card-date">{formatDateTime(c.createdAt)}</span>
-                    </div>
-
-                    <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
-                    <p className="case-card-desc">{c.description}</p>
-                    <p className="case-card-meta">📍 {c.location?.address}</p>
-                    {c.reportedBy && (
-                      <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
-                    )}
-
-                    {c.medicalRecords?.length > 0 && (
-                      <div style={{ marginTop: 12, background: '#fff7ed', borderRadius: 12, padding: '12px 16px', border: '1px solid #fed7aa' }}>
-                        <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#c2410c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Medical Records ({c.medicalRecords.length})
-                        </p>
-                        {c.medicalRecords.map((m, i) => (
-                          <div key={i} className="medical-item">
-                            <strong>{m.diagnosis}</strong>
-                            <p>Treatment: {m.treatment}</p>
-                            {m.medications && <p>Medications: {m.medications}</p>}
-                            {m.notes && <p>{m.notes}</p>}
-                            {m.documents?.length > 0 && m.documents.map((doc, j) => (
-                              <a key={j} href={`http://localhost:5000/uploads/${doc}`} target="_blank" rel="noreferrer"
-                                style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>
-                                📄 Document {j + 1}
-                              </a>
-                            ))}
-                            <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>{formatDateTime(m.createdAt)}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="case-summary-row">
-                      <div className="case-latest-status">
-                        <span className="summary-label">Latest:</span>
-                        <span className="summary-note">
-                          {c.statusHistory?.length > 0
-                            ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-                            : 'No updates yet'}
-                        </span>
-                      </div>
-                      {c.statusHistory?.length > 0 && (
-                        <button className="history-chip" onClick={() => setHistoryModal(c)}>
-                          History ({c.statusHistory.length})
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="case-card-actions">
-  {/* Accept / Decline — when newly assigned */}
-  {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
-    <>
-      <button className="btn btn-green"
-        onClick={() => handle(() => acceptVetCase(c._id), 'Case accepted!')}>
-        Accept Case
-      </button>
-      <button className="btn btn-red"
-        onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined — volunteer notified')}>
-        Decline
-      </button>
-    </>
-  )}
-
-  {/* Mark arrived — after accepting */}
-  {c.status === 'vet_accepted' && (
-    <button className="btn btn-orange"
-      onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>
-      Mark Animal Arrived
-    </button>
-  )}
-
-  {/* Add medical record */}
-  {['vet_accepted', 'at_vet'].includes(c.status) && (
-    <button className="btn btn-blue"
-      onClick={() => { setMedModal(c._id); setMedFiles([]); }}>
-      Add Medical Record
-    </button>
-  )}
-
-  {/* Treatment complete */}
-  {c.status === 'at_vet' && (
-    <button className="btn btn-green"
-      onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>
-      Treatment Complete
-    </button>
-  )}
-</div>
-                  </div>
-                ))}
-              </div>
-
-              {!showAll && cases.length > PREVIEW_COUNT && (
-                <div className="show-more-footer">
-                  <p>{cases.length - PREVIEW_COUNT} more cases not shown</p>
-                  <button className="view-all-btn" onClick={() => setShowAll(true)}>
-                    View All {cases.length} Cases
-                  </button>
+            ) : (
+              <>
+                <div className="case-list">
+                  {pagedAssigned.map(c => <CaseCard key={c._id} c={c} />)}
                 </div>
-              )}
-            </>
-          )}
+                <Pagination
+                  currentPage={assignedPage}
+                  totalPages={assignedTotalPages}
+                  onPrev={() => setAssignedPage(p => Math.max(1, p - 1))}
+                  onNext={() => setAssignedPage(p => Math.min(assignedTotalPages, p + 1))}
+                />
+              </>
+            )}
+          </>
+        )}
+
+        {/* REPORTED CASES VIEW */}
+        {view === 'reported' && (
+          <>
+            <div className="section-header">
+              <div>
+                <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
+                <h2 className="section-title" style={{ marginTop: 8 }}>Cases I Reported</h2>
+                <p className="section-subtitle">
+                  {sortedMyCases.length} cases · Page {reportedPage} of {reportedTotalPages || 1}
+                </p>
+              </div>
+            </div>
+            {loading ? (
+              <div className="loading">Loading...</div>
+            ) : sortedMyCases.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🐾</div>
+                <h3>No reported cases</h3>
+                <p>Cases you report will appear here.</p>
+              </div>
+            ) : (
+              <>
+                <div className="case-list">
+                  {pagedReported.map(c => <ReportedCard key={c._id} c={c} />)}
+                </div>
+                <Pagination
+                  currentPage={reportedPage}
+                  totalPages={reportedTotalPages}
+                  onPrev={() => setReportedPage(p => Math.max(1, p - 1))}
+                  onNext={() => setReportedPage(p => Math.min(reportedTotalPages, p + 1))}
+                />
+              </>
+            )}
+          </>
+        )}
 
         {/* Medical Record Modal */}
         {medModal && (

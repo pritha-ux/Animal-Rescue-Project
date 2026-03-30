@@ -106,16 +106,19 @@ export const markAtVet = async (req, res) => {
   }
 };
 
-// Vet: Add medical record
 export const addMedicalRecord = async (req, res) => {
   try {
     const { diagnosis, treatment, medications, notes } = req.body;
-    const documents = req.files ? req.files.map(f => f.path) : [];
+    const documents = req.files ? req.files.map(f => f.filename) : [];
 
     const caseData = await Case.findById(req.params.id);
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
     if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
+
+    // ← allow any vet-related status
+    if (!['vet_accepted', 'at_vet', 'in_transit'].includes(caseData.status))
+      return res.status(400).json({ message: 'Cannot add medical record at this stage' });
 
     caseData.medicalRecords.push({
       diagnosis,
@@ -134,12 +137,11 @@ export const addMedicalRecord = async (req, res) => {
 
     await caseData.save();
 
-    // Notify admin and reporter
     await Notification.create({
       caseId: caseData._id,
       recipient: caseData.reportedBy,
       message: `Medical update for case ${caseData.caseId}: ${diagnosis}`,
-      type: 'medical_update',
+      type: 'status_update',
     });
 
     res.json({ message: 'Medical record added', case: caseData });
