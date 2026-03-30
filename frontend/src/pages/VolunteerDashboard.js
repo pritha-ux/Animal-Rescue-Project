@@ -5,6 +5,8 @@ import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
+const CASES_PER_PAGE = 2;
+
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -14,12 +16,10 @@ const formatDateTime = (dateStr) => {
   });
 };
 
-// Reusable timestamp block used in every card
 const CardTimestamps = ({ createdAt, statusHistory }) => {
   const latestTimestamp = statusHistory?.length > 0
     ? statusHistory[statusHistory.length - 1].timestamp
     : null;
-
   return (
     <div className="case-card-dates">
       <span className="case-card-date">
@@ -30,6 +30,23 @@ const CardTimestamps = ({ createdAt, statusHistory }) => {
           <span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}
         </span>
       )}
+    </div>
+  );
+};
+
+const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="pagination-row">
+      <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>
+        ← Prev
+      </button>
+      <span className="pagination-info">
+        Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+      </span>
+      <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>
+        Next →
+      </button>
     </div>
   );
 };
@@ -45,7 +62,22 @@ export default function VolunteerDashboard() {
   const [historyModal, setHistoryModal] = useState(null);
   const [selectedVet, setSelectedVet] = useState('');
   const [selectedShelter, setSelectedShelter] = useState('');
-  const [view, setView] = useState('dashboard'); // 'dashboard' | 'assigned' | 'reported'
+  const [view, setView] = useState('dashboard');
+
+  const [assignedPage, setAssignedPage] = useState(1);
+  const [reportedPage, setReportedPage] = useState(1);
+
+  const assignedTotalPages = Math.ceil(cases.length / CASES_PER_PAGE);
+  const reportedTotalPages = Math.ceil(myCases.length / CASES_PER_PAGE);
+
+  const pagedAssigned = cases.slice(
+    (assignedPage - 1) * CASES_PER_PAGE,
+    assignedPage * CASES_PER_PAGE
+  );
+  const pagedReported = myCases.slice(
+    (reportedPage - 1) * CASES_PER_PAGE,
+    reportedPage * CASES_PER_PAGE
+  );
 
   const load = async () => {
     setLoading(true);
@@ -70,6 +102,12 @@ export default function VolunteerDashboard() {
       setShelters(r.data.shelters || []);
     }).catch(() => {});
   }, []);
+
+  const goToView = (v) => {
+    setView(v);
+    setAssignedPage(1);
+    setReportedPage(1);
+  };
 
   const handle = async (fn, successMsg) => {
     try {
@@ -114,7 +152,6 @@ export default function VolunteerDashboard() {
           <span className="case-id">{c.caseId}</span>
           <StatusBadge status={c.status} />
         </div>
-        {/* ── Reported + Updated timestamps ── */}
         <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
       </div>
       <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
@@ -170,15 +207,13 @@ export default function VolunteerDashboard() {
     </div>
   );
 
-  // Reusable reported case card (used in dashboard preview + reported view)
   const ReportedCard = ({ c }) => (
-    <div key={c._id} className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
+    <div className="case-card" style={{ borderLeftColor: '#7c3aed' }}>
       <div className="case-card-header">
         <div className="case-card-id-row">
           <span className="case-id">{c.caseId}</span>
           <StatusBadge status={c.status} />
         </div>
-        {/* ── Reported + Updated timestamps ── */}
         <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
       </div>
       <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
@@ -207,7 +242,6 @@ export default function VolunteerDashboard() {
       <Navbar />
       <div className="dashboard-container">
 
-        {/* HEADER */}
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Volunteer Dashboard</h1>
@@ -226,7 +260,6 @@ export default function VolunteerDashboard() {
         {/* DASHBOARD VIEW */}
         {view === 'dashboard' && (
           <>
-            {/* Stats Row */}
             <div className="dash-stats-row">
               <div className="dash-stat-box blue">
                 <span className="dash-stat-num">{cases.length}</span>
@@ -246,9 +279,8 @@ export default function VolunteerDashboard() {
               </div>
             </div>
 
-            {/* Quick Action Cards */}
             <div className="quick-action-grid">
-              <div className="quick-action-card" onClick={() => setView('assigned')}>
+              <div className="quick-action-card" onClick={() => goToView('assigned')}>
                 <div className="quick-action-icon" style={{ background: '#eff6ff' }}>📋</div>
                 <div className="quick-action-info">
                   <p className="quick-action-title">Assigned Cases</p>
@@ -256,7 +288,7 @@ export default function VolunteerDashboard() {
                 </div>
                 <span className="quick-action-arrow">→</span>
               </div>
-              <div className="quick-action-card" onClick={() => setView('reported')}>
+              <div className="quick-action-card" onClick={() => goToView('reported')}>
                 <div className="quick-action-icon" style={{ background: '#faf5ff' }}>🐾</div>
                 <div className="quick-action-info">
                   <p className="quick-action-title">Cases I Reported</p>
@@ -266,7 +298,6 @@ export default function VolunteerDashboard() {
               </div>
             </div>
 
-            {/* Recent Assigned Cases Preview */}
             {cases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
@@ -274,7 +305,7 @@ export default function VolunteerDashboard() {
                     <h2 className="section-title">Recent Assigned Cases</h2>
                     <p className="section-subtitle">Showing latest 2 cases</p>
                   </div>
-                  <button className="view-all-btn" onClick={() => setView('assigned')}>
+                  <button className="view-all-btn" onClick={() => goToView('assigned')}>
                     View All ({cases.length})
                   </button>
                 </div>
@@ -284,7 +315,6 @@ export default function VolunteerDashboard() {
               </>
             )}
 
-            {/* Recent Reported Cases Preview */}
             {myCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
@@ -292,7 +322,7 @@ export default function VolunteerDashboard() {
                     <h2 className="section-title">Recently Reported by Me</h2>
                     <p className="section-subtitle">Showing latest 2 cases</p>
                   </div>
-                  <button className="view-all-btn" onClick={() => setView('reported')}>
+                  <button className="view-all-btn" onClick={() => goToView('reported')}>
                     View All ({myCases.length})
                   </button>
                 </div>
@@ -317,23 +347,34 @@ export default function VolunteerDashboard() {
           <>
             <div className="section-header">
               <div>
-                <button className="back-btn" onClick={() => setView('dashboard')}>← Back</button>
+                <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
                 <h2 className="section-title" style={{ marginTop: 8 }}>All Assigned Cases</h2>
-                <p className="section-subtitle">{cases.length} cases assigned to you</p>
+                <p className="section-subtitle">
+                  {cases.length} cases · Page {assignedPage} of {assignedTotalPages || 1}
+                </p>
               </div>
             </div>
-            {loading ? <div className="loading">Loading...</div>
-              : cases.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📋</div>
-                  <h3>No assigned cases</h3>
-                  <p>Cases assigned to you will appear here.</p>
-                </div>
-              ) : (
+            {loading ? (
+              <div className="loading">Loading...</div>
+            ) : cases.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📋</div>
+                <h3>No assigned cases</h3>
+                <p>Cases assigned to you will appear here.</p>
+              </div>
+            ) : (
+              <>
                 <div className="case-list">
-                  {cases.map(c => <CaseCard key={c._id} c={c} />)}
+                  {pagedAssigned.map(c => <CaseCard key={c._id} c={c} />)}
                 </div>
-              )}
+                <Pagination
+                  currentPage={assignedPage}
+                  totalPages={assignedTotalPages}
+                  onPrev={() => setAssignedPage(p => Math.max(1, p - 1))}
+                  onNext={() => setAssignedPage(p => Math.min(assignedTotalPages, p + 1))}
+                />
+              </>
+            )}
           </>
         )}
 
@@ -342,23 +383,34 @@ export default function VolunteerDashboard() {
           <>
             <div className="section-header">
               <div>
-                <button className="back-btn" onClick={() => setView('dashboard')}>← Back</button>
+                <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
                 <h2 className="section-title" style={{ marginTop: 8 }}>Cases I Reported</h2>
-                <p className="section-subtitle">{myCases.length} cases you reported</p>
+                <p className="section-subtitle">
+                  {myCases.length} cases · Page {reportedPage} of {reportedTotalPages || 1}
+                </p>
               </div>
             </div>
-            {loading ? <div className="loading">Loading...</div>
-              : myCases.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">🐾</div>
-                  <h3>No reported cases</h3>
-                  <p>Cases you report will appear here.</p>
-                </div>
-              ) : (
+            {loading ? (
+              <div className="loading">Loading...</div>
+            ) : myCases.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🐾</div>
+                <h3>No reported cases</h3>
+                <p>Cases you report will appear here.</p>
+              </div>
+            ) : (
+              <>
                 <div className="case-list">
-                  {myCases.map(c => <ReportedCard key={c._id} c={c} />)}
+                  {pagedReported.map(c => <ReportedCard key={c._id} c={c} />)}
                 </div>
-              )}
+                <Pagination
+                  currentPage={reportedPage}
+                  totalPages={reportedTotalPages}
+                  onPrev={() => setReportedPage(p => Math.max(1, p - 1))}
+                  onNext={() => setReportedPage(p => Math.min(reportedTotalPages, p + 1))}
+                />
+              </>
+            )}
           </>
         )}
 
