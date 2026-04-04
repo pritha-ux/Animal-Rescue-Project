@@ -337,10 +337,10 @@ export default function AdminDashboard() {
                           </button>
                         )}
                         {completedStatuses.includes(c.status) && (
-                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>✅ Completed</span>
+                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>Completed</span>
                         )}
                         {closedStatus.includes(c.status) && (
-                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem' }}>🔒 Closed</span>
+                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem' }}> Closed</span>
                         )}
                       </td>
                     </tr>
@@ -411,4 +411,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}git 
+} 

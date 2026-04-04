@@ -127,7 +127,7 @@ export default function TrackCase() {
         )}
 
         <div className="track-back">
-          <button onClick={() => navigate('/login')}>← Back to Login</button>
+          <button onClick={() => navigate(-1)}>← Back</button>
         </div>
       </div>
     </div>
