@@ -39,24 +39,6 @@ const STATUS_COLORS = {
   closed:             '#6b7280',
 };
 
-const ACTIVITY_ICONS = {
-  reported:           '📢',
-  assigned:           '👤',
-  volunteer_accepted: '✅',
-  volunteer_declined: '❌',
-  in_transit:         '🚗',
-  vet_accepted:       '🩺',
-  vet_declined:       '❌',
-  at_vet:             '🏥',
-  treatment_done:     '💊',
-  shelter_accepted:   '🏠',
-  shelter_declined:   '❌',
-  at_shelter:         '🏠',
-  adopted:            '🎉',
-  returned_to_owner:  '🔄',
-  closed:             '🔒',
-};
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [cases, setCases] = useState([]);
@@ -109,7 +91,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Donut chart data
   const donutData = stats ? Object.entries(stats.statusBreakdown)
     .filter(([, v]) => v > 0)
     .map(([key, value]) => ({
@@ -118,7 +99,6 @@ export default function AdminDashboard() {
       color: STATUS_COLORS[key] || '#9ca3af',
     })) : [];
 
-  // Line chart: cases per day
   const lineData = (() => {
     if (!cases.length) return [];
     const counts = {};
@@ -129,25 +109,6 @@ export default function AdminDashboard() {
     return Object.entries(counts)
       .slice(-10)
       .map(([date, count]) => ({ date, count }));
-  })();
-
-  // Activity feed
-  const activityFeed = (() => {
-    const events = [];
-    cases.forEach(c => {
-      (c.statusHistory || []).forEach(h => {
-        events.push({
-          caseId: c.caseId,
-          animalType: c.animalType,
-          status: h.status,
-          note: h.note,
-          timestamp: h.timestamp,
-        });
-      });
-    });
-    return events
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 12);
   })();
 
   const statCards = stats ? [
@@ -283,35 +244,6 @@ export default function AdminDashboard() {
                   <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>Not enough data yet</div>
                 )}
               </div>
-            </div>
-
-            {/* Activity Feed */}
-            <div className="chart-card" style={{ marginTop: 20 }}>
-              <p className="chart-title">Recent Activity</p>
-              {activityFeed.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>No activity yet</div>
-              ) : (
-                <div className="activity-feed">
-                  {activityFeed.map((ev, i) => (
-                    <div key={i} className="activity-item">
-                      <div className="activity-icon">
-                        {ACTIVITY_ICONS[ev.status] || '🔔'}
-                      </div>
-                      <div className="activity-body">
-                        <p className="activity-text">
-                          <span className="case-id" style={{ fontSize: '0.75rem' }}>{ev.caseId}</span>
-                          {' '}
-                          <span style={{ color: '#374151' }}>({ev.animalType})</span>
-                          {' — '}
-                          <StatusBadge status={ev.status} />
-                        </p>
-                        {ev.note && <p className="activity-note">{ev.note}</p>}
-                      </div>
-                      <span className="activity-time">{formatDateTime(ev.timestamp)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Recent Cases Table */}
@@ -479,4 +411,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
+}git 
