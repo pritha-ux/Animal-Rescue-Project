@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { getDashboardStats, getAllCases, getUsersByRole, assignVolunteer, closeCase } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
@@ -12,6 +16,45 @@ const formatDateTime = (dateStr) => {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true
   });
+};
+
+const formatDateShort = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const STATUS_COLORS = {
+  reported:           '#f59e0b',
+  assigned:           '#3b82f6',
+  volunteer_accepted: '#6366f1',
+  in_transit:         '#8b5cf6',
+  vet_accepted:       '#0d9488',
+  at_vet:             '#ea580c',
+  treatment_done:     '#f97316',
+  shelter_accepted:   '#14b8a6',
+  at_shelter:         '#06b6d4',
+  adopted:            '#16a34a',
+  returned_to_owner:  '#84cc16',
+  closed:             '#6b7280',
+};
+
+const ACTIVITY_ICONS = {
+  reported:           '📢',
+  assigned:           '👤',
+  volunteer_accepted: '✅',
+  volunteer_declined: '❌',
+  in_transit:         '🚗',
+  vet_accepted:       '🩺',
+  vet_declined:       '❌',
+  at_vet:             '🏥',
+  treatment_done:     '💊',
+  shelter_accepted:   '🏠',
+  shelter_declined:   '❌',
+  at_shelter:         '🏠',
+  adopted:            '🎉',
+  returned_to_owner:  '🔄',
+  closed:             '🔒',
 };
 
 export default function AdminDashboard() {
@@ -66,21 +109,63 @@ export default function AdminDashboard() {
     }
   };
 
+  // Donut chart data
+  const donutData = stats ? Object.entries(stats.statusBreakdown)
+    .filter(([, v]) => v > 0)
+    .map(([key, value]) => ({
+      name: key.replace(/_/g, ' '),
+      value,
+      color: STATUS_COLORS[key] || '#9ca3af',
+    })) : [];
+
+  // Line chart: cases per day
+  const lineData = (() => {
+    if (!cases.length) return [];
+    const counts = {};
+    cases.forEach(c => {
+      const day = formatDateShort(c.createdAt);
+      counts[day] = (counts[day] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .slice(-10)
+      .map(([date, count]) => ({ date, count }));
+  })();
+
+  // Activity feed
+  const activityFeed = (() => {
+    const events = [];
+    cases.forEach(c => {
+      (c.statusHistory || []).forEach(h => {
+        events.push({
+          caseId: c.caseId,
+          animalType: c.animalType,
+          status: h.status,
+          note: h.note,
+          timestamp: h.timestamp,
+        });
+      });
+    });
+    return events
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 12);
+  })();
+
   const statCards = stats ? [
-    { label: 'Total Cases', value: stats.totalCases, cls: 'blue' },
-    { label: 'Reported', value: stats.statusBreakdown.reported, cls: 'yellow' },
-    { label: 'In Transit', value: stats.statusBreakdown.inTransit, cls: 'purple' },
-    { label: 'At Vet', value: stats.statusBreakdown.atVet, cls: 'orange' },
-    { label: 'At Shelter', value: stats.statusBreakdown.atShelter, cls: 'teal' },
-    { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
+    { label: 'Total Cases', value: stats.totalCases,                cls: 'blue'   },
+    { label: 'Reported',    value: stats.statusBreakdown.reported,  cls: 'yellow' },
+    { label: 'In Transit',  value: stats.statusBreakdown.inTransit, cls: 'purple' },
+    { label: 'At Vet',      value: stats.statusBreakdown.atVet,     cls: 'orange' },
+    { label: 'At Shelter',  value: stats.statusBreakdown.atShelter, cls: 'teal'   },
+    { label: 'Adopted',     value: stats.statusBreakdown.adopted,   cls: 'green'  },
   ] : [];
 
   const noReassignStatuses = [
     'volunteer_accepted', 'in_transit', 'vet_accepted', 'vet_declined',
     'at_vet', 'treatment_done', 'shelter_accepted', 'shelter_declined',
-    'at_shelter', 'adopted', 'returned_to_owner', 'closed'
+    'at_shelter', 'adopted', 'returned_to_owner', 'closed',
   ];
-  const completedStatuses = ['closed', 'adopted', 'returned_to_owner'];
+  const completedStatuses = ['adopted', 'returned_to_owner'];
+  const closedStatus      = ['closed'];
 
   if (loading) return <div className="loading">Loading dashboard...</div>;
 
@@ -134,7 +219,103 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <h3 className="card-title">Recent Cases</h3>
+            {/* Charts Row */}
+            <div className="charts-row">
+              <div className="chart-card">
+                <p className="chart-title">Cases by Status</p>
+                {donutData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={95}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {donutData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [value, name]}
+                        contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        iconSize={8}
+                        formatter={(value) => (
+                          <span style={{ fontSize: '0.75rem', color: '#374151', textTransform: 'capitalize' }}>{value}</span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>No data yet</div>
+                )}
+              </div>
+
+              <div className="chart-card">
+                <p className="chart-title">Cases Over Time</p>
+                {lineData.length > 1 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <LineChart data={lineData} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }}
+                        formatter={(v) => [v, 'Cases']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#ea580c"
+                        strokeWidth={2.5}
+                        dot={{ fill: '#ea580c', r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>Not enough data yet</div>
+                )}
+              </div>
+            </div>
+
+            {/* Activity Feed */}
+            <div className="chart-card" style={{ marginTop: 20 }}>
+              <p className="chart-title">Recent Activity</p>
+              {activityFeed.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>No activity yet</div>
+              ) : (
+                <div className="activity-feed">
+                  {activityFeed.map((ev, i) => (
+                    <div key={i} className="activity-item">
+                      <div className="activity-icon">
+                        {ACTIVITY_ICONS[ev.status] || '🔔'}
+                      </div>
+                      <div className="activity-body">
+                        <p className="activity-text">
+                          <span className="case-id" style={{ fontSize: '0.75rem' }}>{ev.caseId}</span>
+                          {' '}
+                          <span style={{ color: '#374151' }}>({ev.animalType})</span>
+                          {' — '}
+                          <StatusBadge status={ev.status} />
+                        </p>
+                        {ev.note && <p className="activity-note">{ev.note}</p>}
+                      </div>
+                      <span className="activity-time">{formatDateTime(ev.timestamp)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Cases Table */}
+            <h3 className="card-title" style={{ marginTop: 24 }}>Recent Cases</h3>
             <div className="table-wrapper">
               <table className="data-table">
                 <thead>
@@ -178,7 +359,7 @@ export default function AdminDashboard() {
                   'reported', 'assigned', 'volunteer_accepted', 'volunteer_declined',
                   'in_transit', 'vet_accepted', 'vet_declined', 'at_vet', 'treatment_done',
                   'shelter_accepted', 'shelter_declined', 'at_shelter',
-                  'adopted', 'returned_to_owner', 'closed'
+                  'adopted', 'returned_to_owner', 'closed',
                 ].map(s => (
                   <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                 ))}
@@ -213,7 +394,7 @@ export default function AdminDashboard() {
                             Assign
                           </button>
                         )}
-                        {!completedStatuses.includes(c.status) && (
+                        {![...completedStatuses, ...closedStatus].includes(c.status) && (
                           <button className="action-link red" style={{ marginLeft: 8 }}
                             onClick={async () => {
                               await closeCase(c._id, { note: 'Closed by admin' });
@@ -224,7 +405,10 @@ export default function AdminDashboard() {
                           </button>
                         )}
                         {completedStatuses.includes(c.status) && (
-                          <span style={{ color: '#15803d', fontWeight: 600, fontSize: '0.82rem' }}>Completed</span>
+                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>✅ Completed</span>
+                        )}
+                        {closedStatus.includes(c.status) && (
+                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem' }}>🔒 Closed</span>
                         )}
                       </td>
                     </tr>
@@ -239,12 +423,14 @@ export default function AdminDashboard() {
         {tab === 'staff' && (
           <div className="staff-grid">
             {[
-              { title: 'Volunteers', list: volunteers },
-              { title: 'Veterinarians', list: vets },
-              { title: 'Shelter Staff', list: shelters },
+              { title: 'Volunteers',    list: volunteers },
+              { title: 'Veterinarians', list: vets       },
+              { title: 'Shelter Staff', list: shelters   },
             ].map(({ title, list }) => (
               <div key={title} className="staff-card">
-                <p className="staff-card-title">{title} <span style={{ color: '#ea580c' }}>({list.length})</span></p>
+                <p className="staff-card-title">
+                  {title} <span style={{ color: '#ea580c' }}>({list.length})</span>
+                </p>
                 {list.length === 0
                   ? <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>None registered yet</p>
                   : list.map(u => (
