@@ -4,18 +4,49 @@ import { trackCase } from '../api';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Cases.css';
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+};
+
+const truncateAddress = (addr) => {
+  if (!addr) return '—';
+  const parts = addr.split(',');
+  return parts.slice(0, 2).join(',').trim();
+};
+
+// Group consecutive same-status events
+const groupHistory = (history) => {
+  if (!history?.length) return [];
+  const groups = [];
+  history.forEach(h => {
+    const last = groups[groups.length - 1];
+    if (last && last.status === h.status) {
+      last.events.push(h);
+    } else {
+      groups.push({ status: h.status, events: [h] });
+    }
+  });
+  return groups;
+};
+
 export default function TrackCase() {
   const { caseId: paramId } = useParams();
   const [caseId, setCaseId] = useState(paramId || '');
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAll, setShowAll] = useState(false);
   const navigate = useNavigate();
 
   const handleTrack = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setShowAll(false);
     try {
       const res = await trackCase(caseId.toUpperCase());
       setCaseData(res.data);
@@ -25,6 +56,9 @@ export default function TrackCase() {
       setLoading(false);
     }
   };
+
+  const groupedHistory = groupHistory(caseData?.statusHistory);
+  const displayedGroups = showAll ? groupedHistory : groupedHistory.slice(-4).reverse();
 
   return (
     <div className="track-page">
@@ -50,6 +84,7 @@ export default function TrackCase() {
 
         {caseData && (
           <div className="track-results">
+
             {/* Case Info */}
             <div className="track-card">
               <div className="track-card-header">
@@ -60,8 +95,8 @@ export default function TrackCase() {
                 <StatusBadge status={caseData.status} />
               </div>
               <p className="track-card-desc">{caseData.description}</p>
-              <p className="track-card-meta">📍 {caseData.location?.address}</p>
-              <p className="track-card-meta">📅 Reported: {new Date(caseData.createdAt).toLocaleDateString()}</p>
+              <p className="track-card-meta">📍 {truncateAddress(caseData.location?.address)}</p>
+              <p className="track-card-meta">📅 Reported: {formatDateTime(caseData.createdAt)}</p>
             </div>
 
             {/* Assigned Team */}
@@ -69,13 +104,19 @@ export default function TrackCase() {
               <div className="team-section">
                 <h3>👥 Assigned Team</h3>
                 <p className={`team-row ${caseData.assignedVolunteer ? '' : 'muted'}`}>
-                  🙋 Volunteer: {caseData.assignedVolunteer ? `${caseData.assignedVolunteer.name} • ${caseData.assignedVolunteer.phone}` : 'Not assigned yet'}
+                  🙋 Volunteer: {caseData.assignedVolunteer
+                    ? `${caseData.assignedVolunteer.name} • ${caseData.assignedVolunteer.phone}`
+                    : 'Not assigned yet'}
                 </p>
                 <p className={`team-row ${caseData.assignedVet ? '' : 'muted'}`}>
-                  🩺 Veterinarian: {caseData.assignedVet ? caseData.assignedVet.name : 'Not assigned yet'}
+                  🩺 Veterinarian: {caseData.assignedVet
+                    ? caseData.assignedVet.name
+                    : 'Not assigned yet'}
                 </p>
                 <p className={`team-row ${caseData.assignedShelter ? '' : 'muted'}`}>
-                  🏠 Shelter: {caseData.assignedShelter ? caseData.assignedShelter.name : 'Not assigned yet'}
+                  🏠 Shelter: {caseData.assignedShelter
+                    ? caseData.assignedShelter.name
+                    : 'Not assigned yet'}
                 </p>
               </div>
             </div>
@@ -83,17 +124,37 @@ export default function TrackCase() {
             {/* Timeline */}
             <div className="track-card">
               <div className="timeline">
-                <h3>📋 Status History</h3>
-                {caseData.statusHistory?.map((h, i) => (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <h3 style={{ margin: 0 }}>📋 Status History</h3>
+                  {groupedHistory.length > 4 && (
+                    <button
+                      onClick={() => setShowAll(!showAll)}
+                      style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ea580c', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      {showAll ? 'Show Less ↑' : `Show All (${groupedHistory.length}) ↓`}
+                    </button>
+                  )}
+                </div>
+
+                {!showAll && groupedHistory.length > 4 && (
+                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: 12, fontStyle: 'italic' }}>
+                    Showing latest 4 updates
+                  </p>
+                )}
+
+                {displayedGroups.map((group, i) => (
                   <div key={i} className="timeline-item">
                     <div className="timeline-dot-col">
                       <div className="timeline-dot" />
-                      {i < caseData.statusHistory.length - 1 && <div className="timeline-line" />}
+                      {i < displayedGroups.length - 1 && <div className="timeline-line" />}
                     </div>
                     <div className="timeline-content">
-                      <StatusBadge status={h.status} />
-                      <p className="timeline-note">{h.note}</p>
-                      <p className="timeline-time">{new Date(h.timestamp).toLocaleString()}</p>
+                      <StatusBadge status={group.status} />
+                      {group.events.map((ev, j) => (
+                        <div key={j} style={{ marginTop: j === 0 ? 6 : 8, paddingLeft: j > 0 ? 8 : 0, borderLeft: j > 0 ? '2px solid #f3f4f6' : 'none' }}>
+                          {ev.note && <p className="timeline-note">{ev.note}</p>}
+                          <p className="timeline-time">{formatDateTime(ev.timestamp)}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
