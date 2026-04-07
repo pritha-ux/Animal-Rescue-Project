@@ -11,20 +11,25 @@ const generateToken = (id, role) => {
 
 // REGISTER
 router.post('/register', async (req, res) => {
-  const { name, email, password, role, phone } = req.body;
+  const { name, email, password, role, phone, address } = req.body; // ← add address
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: 'Email already registered' });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed, role, phone });
+    const user = await User.create({
+      name, email, password: hashed, role, phone,
+      address: address || '',  // ← save address
+    });
 
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
+      phone: user.phone,
+      address: user.address,  // ← return address
       token: generateToken(user._id, user.role)
     });
   } catch (err) {
@@ -49,6 +54,8 @@ router.post('/login', async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      phone: user.phone,
+      address: user.address,  // ← return address on login
       token: generateToken(user._id, user.role)
     });
   } catch (err) {
@@ -63,7 +70,7 @@ router.get('/me', async (req, res) => {
     if (!token) return res.status(401).json({ message: 'No token' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id).select('-password'); // address included automatically
     res.json(user);
   } catch (err) {
     res.status(401).json({ message: 'Invalid token' });
