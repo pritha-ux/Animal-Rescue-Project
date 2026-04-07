@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase } from '../api';
+import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase, updateShelterLocation } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
+import LocationPickerModal from '../components/LocationPickerModal';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
@@ -57,6 +58,7 @@ export default function ShelterDashboard() {
   const [msg, setMsg] = useState('');
   const [modal, setModal] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
+  const [locationUpdateModal, setLocationUpdateModal] = useState(null); // ← new
   const [formData, setFormData] = useState({});
   const [view, setView] = useState('dashboard');
   const [page, setPage] = useState(1);
@@ -102,6 +104,19 @@ export default function ShelterDashboard() {
     setFormData({});
   };
 
+  // ── Pin/update shelter location ──
+  const handleUpdateLocation = async (location) => {
+    try {
+      await updateShelterLocation(locationUpdateModal._id, { location });
+      setMsg('Shelter location pinned! The volunteer can now see your location.');
+      setLocationUpdateModal(null);
+      load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Failed to update location.');
+      setLocationUpdateModal(null);
+    }
+  };
+
   const field = (key, placeholder) => (
     <input key={key} type="text" placeholder={placeholder}
       value={formData[key] || ''}
@@ -129,7 +144,6 @@ export default function ShelterDashboard() {
         <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
       )}
 
-      {/* Actions first */}
       <div className="case-card-actions">
         {c.status === 'treatment_done' && (
           <>
@@ -143,6 +157,14 @@ export default function ShelterDashboard() {
             </button>
           </>
         )}
+
+        {/* ── Pin location after accepting ── */}
+        {['shelter_accepted', 'at_shelter'].includes(c.status) && (
+          <button className="btn btn-teal" onClick={() => setLocationUpdateModal(c)}>
+            📍 {c.shelterLocation?.lat ? 'Update Shelter Location' : 'Pin My Shelter Location'}
+          </button>
+        )}
+
         {c.status === 'shelter_accepted' && (
           <button className="btn btn-teal" onClick={() => openModal('admit', c._id)}>
             Admit to Shelter
@@ -160,7 +182,24 @@ export default function ShelterDashboard() {
         )}
       </div>
 
-      {/* Shelter details below actions */}
+      {/* ── Pinned shelter location display ── */}
+      {c.shelterLocation?.lat && (
+        <div style={{ marginTop: 10, background: '#f0fdfa', borderRadius: 10, padding: '10px 14px', border: '1px solid #99f6e4' }}>
+          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', marginBottom: 4 }}>
+            📍 Your Pinned Shelter Location
+          </p>
+          <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+            {c.shelterLocation.address}
+          </p>
+          <a
+            href={`https://www.openstreetmap.org/?mlat=${c.shelterLocation.lat}&mlon=${c.shelterLocation.lng}#map=17/${c.shelterLocation.lat}/${c.shelterLocation.lng}`}
+            target="_blank" rel="noreferrer"
+            style={{ fontSize: '0.78rem', color: '#0f766e', fontWeight: 700 }}>
+            🗺 View on Map
+          </a>
+        </div>
+      )}
+
       {c.shelterDetails && (
         <div style={{ marginTop: 12, background: '#f0fdfa', borderRadius: 10, padding: '12px 16px', fontSize: '0.88rem', border: '1px solid #99f6e4' }}>
           <p style={{ fontWeight: 700, color: '#0f766e', marginBottom: 6, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Shelter Details</p>
@@ -210,7 +249,6 @@ export default function ShelterDashboard() {
           </div>
         )}
 
-        {/* DASHBOARD VIEW */}
         {view === 'dashboard' && (
           <>
             <div className="dash-stats-row">
@@ -270,7 +308,6 @@ export default function ShelterDashboard() {
           </>
         )}
 
-        {/* ALL CASES VIEW */}
         {view === 'all' && (
           <>
             <div className="section-header">
@@ -422,6 +459,15 @@ export default function ShelterDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ── Pin/Update Shelter Location Modal ── */}
+        {locationUpdateModal && (
+          <LocationPickerModal
+            title={locationUpdateModal.shelterLocation?.lat ? 'Update Shelter Location' : 'Pin Your Shelter Location'}
+            onConfirm={handleUpdateLocation}
+            onCancel={() => setLocationUpdateModal(null)}
+          />
         )}
 
       </div>

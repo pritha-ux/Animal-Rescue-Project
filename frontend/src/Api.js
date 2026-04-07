@@ -61,3 +61,4 @@ export const getNotifications = () => API.get('/notifications');
 export const markNotificationRead = (id) => API.put(`/notifications/${id}/read`);
 export const markAllNotificationsRead = () => API.put('/notifications/read-all');
 export const updateVetLocation = (id, data) => API.put(`/vet/cases/${id}/location`, data);
+export const updateShelterLocation = (id, data) => API.put(`/shelter/cases/${id}/location`, data);

@@ -185,7 +185,25 @@ export default function VolunteerDashboard() {
           🗺 View on Map
         </a>
       </div>
+      
     )}
+    {/* ── Shelter Location (shown after shelter accepts) ── */}
+{c.shelterLocation?.lat && (
+  <div style={{ marginTop: 10, background: '#f0fdfa', borderRadius: 10, padding: '10px 14px', border: '1px solid #99f6e4' }}>
+    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', marginBottom: 4 }}>
+      📍 Shelter Location
+    </p>
+    <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+      {c.shelterLocation.address}
+    </p>
+    <a
+      href={`https://www.openstreetmap.org/?mlat=${c.shelterLocation.lat}&mlon=${c.shelterLocation.lng}#map=17/${c.shelterLocation.lat}/${c.shelterLocation.lng}`}
+      target="_blank" rel="noreferrer"
+      style={{ fontSize: '0.78rem', color: '#0d9488', fontWeight: 700 }}>
+      🗺 View on Map
+    </a>
+  </div>
+)}
 
     <div className="case-summary-row">
       <div className="case-latest-status">

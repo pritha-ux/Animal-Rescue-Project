@@ -41,6 +41,38 @@ export const acceptShelterCase = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+export const updateShelterLocation = async (req, res) => {
+  try {
+    const { location } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+    if (String(caseData.assignedShelter) !== String(req.user._id))
+      return res.status(403).json({ message: 'Not assigned to this shelter' });
+
+    if (!location?.lat || !location?.lng)
+      return res.status(400).json({ message: 'Invalid location — lat and lng required' });
+
+    caseData.shelterLocation = {
+      lat: location.lat,
+      lng: location.lng,
+      address: location.address || ''
+    };
+    await caseData.save();
+
+    if (caseData.assignedVolunteer) {
+      await Notification.create({
+        caseId: caseData._id,
+        recipient: caseData.assignedVolunteer,
+        message: `Shelter has pinned their location for case ${caseData.caseId}.`,
+        type: 'status_update',
+      });
+    }
+
+    res.json({ message: 'Shelter location updated', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 export const declineShelterCase = async (req, res) => {
   try {
