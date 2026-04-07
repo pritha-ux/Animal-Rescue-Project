@@ -8,7 +8,7 @@ const generateToken = (id) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone, role, address } = req.body; // ← add address
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'Email already registered' });
@@ -21,6 +21,7 @@ export const registerUser = async (req, res) => {
       password: hashedPassword,
       phone,
       role: role || 'public',
+      address: address || '',  // ← save address
     });
 
     const token = generateToken(user._id);
@@ -32,6 +33,7 @@ export const registerUser = async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      address: user.address,  // ← return address
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -57,6 +59,7 @@ export const loginUser = async (req, res) => {
       email: user.email,
       role: user.role,
       phone: user.phone,
+      address: user.address,  // ← return address on login too
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
