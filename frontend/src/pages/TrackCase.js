@@ -18,7 +18,6 @@ const truncateAddress = (addr) => {
   return parts.slice(0, 2).join(',').trim();
 };
 
-// Group consecutive same-status events
 const groupHistory = (history) => {
   if (!history?.length) return [];
   const groups = [];
@@ -39,14 +38,12 @@ export default function TrackCase() {
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showAll, setShowAll] = useState(false);
   const navigate = useNavigate();
 
   const handleTrack = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setShowAll(false);
     try {
       const res = await trackCase(caseId.toUpperCase());
       setCaseData(res.data);
@@ -58,7 +55,6 @@ export default function TrackCase() {
   };
 
   const groupedHistory = groupHistory(caseData?.statusHistory);
-  const displayedGroups = showAll ? groupedHistory : groupedHistory.slice(-4).reverse();
 
   return (
     <div className="track-page">
@@ -72,8 +68,14 @@ export default function TrackCase() {
         <div className="track-search-box">
           <form onSubmit={handleTrack}>
             <div className="track-search-row">
-              <input className="track-input" type="text" value={caseId}
-                onChange={e => setCaseId(e.target.value)} required placeholder="CASE-0001" />
+              <input
+                className="track-input"
+                type="text"
+                value={caseId}
+                onChange={e => setCaseId(e.target.value)}
+                required
+                placeholder="CASE-0001"
+              />
               <button type="submit" className="track-btn" disabled={loading}>
                 {loading ? '...' : 'Track'}
               </button>
@@ -99,64 +101,63 @@ export default function TrackCase() {
               <p className="track-card-meta">📅 Reported: {formatDateTime(caseData.createdAt)}</p>
             </div>
 
- {/* Assigned Team */}
-<div className="track-card">
-  <div className="team-section">
-    <h3>👥 Assigned Team</h3>
-
-    {/* Volunteer */}
-    {caseData?.assignedVolunteer ? (
-      <p>🙋 Volunteer: {caseData.assignedVolunteer.name} • {caseData.assignedVolunteer.phone || 'No phone'}</p>
-    ) : (
-      <p className="muted">🙋 Volunteer: Not assigned yet</p>
-    )}
-
-    {/* Veterinarian */}
-    {caseData?.assignedVet ? (
-      <p>🩺 Veterinarian: {caseData.assignedVet.name} • {caseData.assignedVet.phone || 'No phone'}</p>
-    ) : (
-      <p className="muted">🩺 Veterinarian: Not assigned yet</p>
-    )}
-
-    {/* Shelter */}
-    {caseData?.assignedShelter ? (
-      <p>🏠 Shelter: {caseData.assignedShelter.name} • {caseData.assignedShelter.phone || 'No phone'}</p>
-    ) : (
-      <p className="muted">🏠 Shelter: Not assigned yet</p>
-    )}
-
-  </div>
-</div>
-            {/* Timeline */}
+            {/* Assigned Team */}
             <div className="track-card">
-              <div className="timeline">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <h3 style={{ margin: 0 }}>📋 Status History</h3>
-                  {groupedHistory.length > 4 && (
-                    <button
-                      onClick={() => setShowAll(!showAll)}
-                      style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ea580c', background: 'none', border: 'none', cursor: 'pointer' }}>
-                      {showAll ? 'Show Less ↑' : `Show All (${groupedHistory.length}) ↓`}
-                    </button>
-                  )}
-                </div>
+              <div className="team-section">
+                <h3>👥 Assigned Team</h3>
 
-                {!showAll && groupedHistory.length > 4 && (
-                  <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: 12, fontStyle: 'italic' }}>
-                    Showing latest 4 updates
-                  </p>
+                {caseData?.assignedVolunteer ? (
+                  <div className="team-row">
+                    🙋 Volunteer: {caseData.assignedVolunteer.name} • {caseData.assignedVolunteer.phone || 'No phone'}
+                  </div>
+                ) : (
+                  <div className="team-row muted">🙋 Volunteer: Not assigned yet</div>
                 )}
 
-                {displayedGroups.map((group, i) => (
+                {caseData?.assignedVet ? (
+                  <div className="team-row">
+                    🩺 Veterinarian: {caseData.assignedVet.name} • {caseData.assignedVet.phone || 'No phone'}
+                  </div>
+                ) : (
+                  <div className="team-row muted">🩺 Veterinarian: Not assigned yet</div>
+                )}
+
+                {caseData?.assignedShelter ? (
+                  <div className="team-row">
+                    🏠 Shelter: {caseData.assignedShelter.name} • {caseData.assignedShelter.phone || 'No phone'}
+                  </div>
+                ) : (
+                  <div className="team-row muted">🏠 Shelter: Not assigned yet</div>
+                )}
+              </div>
+            </div>
+
+            {/* Timeline (Always show full) */}
+            <div className="track-card">
+              <div className="timeline">
+                <h3 style={{ marginBottom: 14 }}>📋 Status History</h3>
+
+                {groupedHistory.length === 0 && (
+                  <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No status updates yet.</p>
+                )}
+
+                {groupedHistory.map((group, i) => (
                   <div key={i} className="timeline-item">
                     <div className="timeline-dot-col">
                       <div className="timeline-dot" />
-                      {i < displayedGroups.length - 1 && <div className="timeline-line" />}
+                      {i < groupedHistory.length - 1 && <div className="timeline-line" />}
                     </div>
                     <div className="timeline-content">
                       <StatusBadge status={group.status} />
                       {group.events.map((ev, j) => (
-                        <div key={j} style={{ marginTop: j === 0 ? 6 : 8, paddingLeft: j > 0 ? 8 : 0, borderLeft: j > 0 ? '2px solid #f3f4f6' : 'none' }}>
+                        <div
+                          key={j}
+                          style={{
+                            marginTop: j === 0 ? 6 : 8,
+                            paddingLeft: j > 0 ? 10 : 0,
+                            borderLeft: j > 0 ? '2px solid #f3f4f6' : 'none'
+                          }}
+                        >
                           {ev.note && <p className="timeline-note">{ev.note}</p>}
                           <p className="timeline-time">{formatDateTime(ev.timestamp)}</p>
                         </div>
@@ -182,6 +183,17 @@ export default function TrackCase() {
               </div>
             )}
 
+            {/* Shelter Care Details */}
+            {caseData?.shelterDetails && (
+              <div className="track-card">
+                <h3 style={{ fontWeight: 700, marginBottom: 14 }}>Shelter Care Details</h3>
+                {caseData.shelterDetails.cage_number && <p>Cage: {caseData.shelterDetails.cage_number}</p>}
+                {caseData.shelterDetails.diet && <p>Diet: {caseData.shelterDetails.diet}</p>}
+                {caseData.shelterDetails.health_status && <p>Health: {caseData.shelterDetails.health_status}</p>}
+                {caseData.shelterDetails.notes && <p>Notes: {caseData.shelterDetails.notes}</p>}
+              </div>
+            )}
+
             {/* Outcome */}
             {caseData.outcome && (
               <div className="outcome-card">
@@ -190,6 +202,7 @@ export default function TrackCase() {
                 {caseData.outcomeDetails?.ownerName && <p>Returned to: {caseData.outcomeDetails.ownerName}</p>}
               </div>
             )}
+
           </div>
         )}
 

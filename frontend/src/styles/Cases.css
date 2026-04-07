@@ -309,3 +309,61 @@
   margin-bottom: 4px;
   box-shadow: 0 4px 16px rgba(234,88,12,0.1);
 }
+
+/* ----------------- Medical Records ----------------- */
+.track-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #1f2937; /* dark gray */
+}
+
+/* Individual Medical Record */
+.medical-item {
+  background: #f9fafb; /* light gray background */
+  border-left: 3px solid #3b82f6; /* blue accent for medical */
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.medical-item strong {
+  font-size: 0.95rem;
+  color: #1a1a2e; /* dark text */
+}
+
+.medical-item p {
+  font-size: 0.88rem;
+  color: #374151;
+  margin: 4px 0;
+}
+
+/* ----------------- Shelter Care Details ----------------- */
+.track-card .shelter-details {
+  background: #f0fdfa; /* light green background */
+  border-left: 3px solid #10b981; /* green accent */
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.track-card .shelter-details p {
+  font-size: 0.88rem;
+  color: #065f46; /* dark green text */
+  margin: 6px 0;
+}
+
+/* Optional: add icons spacing */
+.track-card .shelter-details p::before {
+  margin-right: 6px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .medical-item, .track-card .shelter-details {
+    padding: 10px 12px;
+  }
+  .track-card h3 {
+    font-size: 0.95rem;
+  }
+}

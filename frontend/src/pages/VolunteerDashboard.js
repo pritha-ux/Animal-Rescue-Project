@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getVolunteerCases, acceptCase, declineCase, markInTransit, getVolunteerStaff, assignVetByVolunteer, assignShelterByVolunteer,markInTransitToShelter,
-  markAtShelter, getMyCases } from '../api';
+ getMyCases } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
