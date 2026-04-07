@@ -55,7 +55,7 @@ export default function VetDashboard() {
   const [msg, setMsg] = useState('');
   const [medModal, setMedModal] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
-  const [locationModal, setLocationModal] = useState(null); // ← case object to accept
+  const [locationModal, setLocationModal] = useState(null);
   const [medData, setMedData] = useState({ diagnosis: '', treatment: '', medications: '', notes: '' });
   const [medFiles, setMedFiles] = useState([]);
   const [view, setView] = useState('dashboard');
@@ -102,7 +102,6 @@ export default function VetDashboard() {
     load();
   };
 
-  // ── Accept with location ──
   const handleVetAccept = async (location) => {
     try {
       await acceptVetCase(locationModal._id, { location });
@@ -151,7 +150,6 @@ export default function VetDashboard() {
       <div className="case-card-actions">
         {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
           <>
-            {/* ── Accept opens map picker ── */}
             <button className="btn btn-green" onClick={() => setLocationModal(c)}>
               Accept Case
             </button>
@@ -181,7 +179,6 @@ export default function VetDashboard() {
         )}
       </div>
 
-      {/* Show pinned clinic location if set */}
       {c.vetLocation?.lat && (
         <div style={{ marginTop: 10, background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
           <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
@@ -190,7 +187,7 @@ export default function VetDashboard() {
           <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
             {c.vetLocation.address}
           </p>
-          
+          <a
             href={`https://www.openstreetmap.org/?mlat=${c.vetLocation.lat}&mlon=${c.vetLocation.lng}#map=17/${c.vetLocation.lat}/${c.vetLocation.lng}`}
             target="_blank" rel="noreferrer"
             style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>
@@ -529,7 +526,7 @@ export default function VetDashboard() {
           </div>
         )}
 
-        {/* ── Location Picker Modal ── */}
+        {/* Location Picker Modal */}
         {locationModal && (
           <LocationPickerModal
             title="Pin Your Clinic Location"
@@ -541,5 +538,4 @@ export default function VetDashboard() {
       </div>
     </div>
   );
-}  
-    
+}     
