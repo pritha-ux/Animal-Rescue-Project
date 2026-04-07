@@ -27,14 +27,13 @@ export const reportCase = async (req, res) => {
   }
 };
 
-
 export const trackCase = async (req, res) => {
   try {
     const caseData = await Case.findOne({ caseId: req.params.caseId })
       .populate('reportedBy', 'name email')
-      .populate('assignedVolunteer', 'name phone')
-      .populate('assignedVet', 'name phone')
-      .populate('assignedShelter', 'name phone')
+      .populate('assignedVolunteer', 'name phone address')   // ← address
+      .populate('assignedVet', 'name phone address')         // ← address
+      .populate('assignedShelter', 'name phone address')     // ← address
       .populate('statusHistory.updatedBy', 'name role');
 
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
@@ -59,7 +58,9 @@ export const getAllCases = async (req, res) => {
     const filter = status ? { status } : {};
     const cases = await Case.find(filter)
       .populate('reportedBy', 'name email')
-      .populate('assignedVolunteer', 'name phone')
+      .populate('assignedVolunteer', 'name phone address')   // ← address
+      .populate('assignedVet', 'name phone address')         // ← address
+      .populate('assignedShelter', 'name phone address')     // ← address
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip((page - 1) * limit);
@@ -149,9 +150,9 @@ export const getCaseById = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id)
       .populate('reportedBy', 'name email phone')
-      .populate('assignedVolunteer', 'name email phone')
-      .populate('assignedVet', 'name email phone')
-      .populate('assignedShelter', 'name email phone')
+      .populate('assignedVolunteer', 'name email phone address')  // ← address
+      .populate('assignedVet', 'name email phone address')        // ← address
+      .populate('assignedShelter', 'name email phone address')    // ← address
       .populate('statusHistory.updatedBy', 'name role');
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
     res.json(caseData);
