@@ -99,28 +99,34 @@ export default function TrackCase() {
               <p className="track-card-meta">📅 Reported: {formatDateTime(caseData.createdAt)}</p>
             </div>
 
-            {/* Assigned Team */}
-            <div className="track-card">
-              <div className="team-section">
-                <h3>👥 Assigned Team</h3>
-                <p className={`team-row ${caseData.assignedVolunteer ? '' : 'muted'}`}>
-                  🙋 Volunteer: {caseData.assignedVolunteer
-                    ? `${caseData.assignedVolunteer.name} • ${caseData.assignedVolunteer.phone}`
-                    : 'Not assigned yet'}
-                </p>
-                <p className={`team-row ${caseData.assignedVet ? '' : 'muted'}`}>
-                  🩺 Veterinarian: {caseData.assignedVet
-                    ? caseData.assignedVet.name
-                    : 'Not assigned yet'}
-                </p>
-                <p className={`team-row ${caseData.assignedShelter ? '' : 'muted'}`}>
-                  🏠 Shelter: {caseData.assignedShelter
-                    ? caseData.assignedShelter.name
-                    : 'Not assigned yet'}
-                </p>
-              </div>
-            </div>
+ {/* Assigned Team */}
+<div className="track-card">
+  <div className="team-section">
+    <h3>👥 Assigned Team</h3>
 
+    {/* Volunteer */}
+    {caseData?.assignedVolunteer ? (
+      <p>🙋 Volunteer: {caseData.assignedVolunteer.name} • {caseData.assignedVolunteer.phone || 'No phone'}</p>
+    ) : (
+      <p className="muted">🙋 Volunteer: Not assigned yet</p>
+    )}
+
+    {/* Veterinarian */}
+    {caseData?.assignedVet ? (
+      <p>🩺 Veterinarian: {caseData.assignedVet.name} • {caseData.assignedVet.phone || 'No phone'}</p>
+    ) : (
+      <p className="muted">🩺 Veterinarian: Not assigned yet</p>
+    )}
+
+    {/* Shelter */}
+    {caseData?.assignedShelter ? (
+      <p>🏠 Shelter: {caseData.assignedShelter.name} • {caseData.assignedShelter.phone || 'No phone'}</p>
+    ) : (
+      <p className="muted">🏠 Shelter: Not assigned yet</p>
+    )}
+
+  </div>
+</div>
             {/* Timeline */}
             <div className="track-card">
               <div className="timeline">

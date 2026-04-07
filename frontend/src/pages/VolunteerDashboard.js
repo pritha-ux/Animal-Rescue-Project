@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getVolunteerCases, acceptCase, declineCase, markInTransit, getVolunteerStaff, assignVetByVolunteer, assignShelterByVolunteer, getMyCases } from '../api';
+import { getVolunteerCases, acceptCase, declineCase, markInTransit, getVolunteerStaff, assignVetByVolunteer, assignShelterByVolunteer,markInTransitToShelter,
+  markAtShelter, getMyCases } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Dashboard.css';
@@ -243,6 +244,32 @@ export default function VolunteerDashboard() {
             Assign Vet & Shelter
           </button>
         )}
+        {c.status === 'shelter_accepted' && c.shelterLocation?.lat && (
+    <button
+      className="btn btn-orange"
+      onClick={() =>
+        handle(() => markInTransitToShelter(c._id), 'Moving to shelter')
+      }
+    >
+      🚚 Moving to Shelter
+    </button>
+  )}
+
+  {/* 2. Show moving status */}
+  {c.status === 'in_transit_to_shelter' && (
+    <span
+      style={{
+        color: '#ea580c',
+        fontWeight: 600,
+        fontSize: '0.88rem'
+      }}
+    >
+      Moving to shelter...
+    </span>
+  )}
+
+  
+        
       </div>
     )}
   </div>

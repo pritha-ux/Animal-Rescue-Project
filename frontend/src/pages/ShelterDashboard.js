@@ -164,6 +164,15 @@ export default function ShelterDashboard() {
             📍 {c.shelterLocation?.lat ? 'Update Shelter Location' : 'Pin My Shelter Location'}
           </button>
         )}
+        {c.status === 'in_transit_to_shelter' && (
+  <button
+    className="btn btn-teal"
+    onClick={() => handle(() => acceptShelterCase(c._id), 'Animal marked as arrived at shelter!')}
+  >
+    Mark Animal Arrived
+  </button>
+)}
+
 
         {c.status === 'shelter_accepted' && (
           <button className="btn btn-teal" onClick={() => openModal('admit', c._id)}>
@@ -209,7 +218,63 @@ export default function ShelterDashboard() {
           {c.shelterDetails.notes && <p>📝 {c.shelterDetails.notes}</p>}
         </div>
       )}
+{c.medicalRecords?.length > 0 && (
+  <div style={{
+    marginTop: 12,
+    background: '#fff7ed',
+    borderRadius: 12,
+    padding: '12px 16px',
+    border: '1px solid #fed7aa'
+  }}>
+    <p style={{
+      fontWeight: 700,
+      fontSize: '0.78rem',
+      color: '#c2410c',
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }}>
+      Medical Records ({c.medicalRecords.length})
+    </p>
 
+    {c.medicalRecords.map((m, i) => (
+      <div key={i} style={{ marginBottom: 10 }}>
+        <strong>{m.diagnosis}</strong>
+        <p>Treatment: {m.treatment}</p>
+
+        {m.medications && <p>Medications: {m.medications}</p>}
+        {m.notes && <p>{m.notes}</p>}
+
+        {m.documents?.length > 0 && m.documents.map((doc, j) => (
+          <a
+            key={j}
+            href={`http://localhost:5000/uploads/${doc}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: '0.78rem',
+              color: '#ea580c',
+              fontWeight: 600,
+              marginRight: 8
+            }}
+          >
+            📄 Document {j + 1}
+          </a>
+        ))}
+
+
+        <p style={{
+          fontSize: '0.75rem',
+          color: '#9ca3af',
+          marginTop: 4
+        }}>
+          {formatDateTime(m.createdAt)}
+        </p>
+      </div>
+    ))}
+  </div>
+)}
+  
       <div className="case-summary-row">
         <div className="case-latest-status">
           <span className="summary-label">Latest:</span>

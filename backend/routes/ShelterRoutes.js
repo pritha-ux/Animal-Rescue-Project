@@ -15,5 +15,6 @@ router.put('/cases/:id/return', markReturnedToOwner);
 router.put('/cases/:id/accept', protect, roleCheck('shelter_staff'), acceptShelterCase);
 router.put('/cases/:id/decline', protect, roleCheck('shelter_staff'), declineShelterCase);
 router.put('/cases/:id/location', updateShelterLocation);
+router.put('/cases/:id/at-shelter',protect,roleCheck('shelter'),markAtShelter);
 
 export default router;

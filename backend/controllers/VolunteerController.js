@@ -135,3 +135,22 @@ export const assignShelterByVolunteer = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+export const markInTransitToShelter = async (req, res) => {
+  try {
+    const caseItem = await Case.findById(req.params.id);
+
+    caseItem.status = 'in_transit_to_shelter';
+
+    caseItem.statusHistory.push({
+      status: 'in_transit_to_shelter',
+      note: 'Moving animal to shelter',
+      updatedBy: req.user._id,
+    });
+
+    await caseItem.save();
+
+    res.json(caseItem);
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating status' });
+  }
+};

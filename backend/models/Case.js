@@ -16,7 +16,8 @@ const caseSchema = new mongoose.Schema({
     enum: [
       'reported', 'assigned', 'volunteer_accepted', 'volunteer_declined',
       'in_transit', 'vet_accepted', 'vet_declined', 'at_vet', 'treatment_done',
-      'shelter_accepted', 'shelter_declined', 'at_shelter',
+      'shelter_accepted', 'in_transit_to_shelter',
+      ,'shelter_declined', 'at_shelter',
       'adopted', 'returned_to_owner', 'closed'
     ],
     default: 'reported',
