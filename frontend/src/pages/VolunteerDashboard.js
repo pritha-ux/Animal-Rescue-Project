@@ -146,66 +146,89 @@ export default function VolunteerDashboard() {
   };
 
   const CaseCard = ({ c }) => (
-    <div className="case-card">
-      <div className="case-card-header">
-        <div className="case-card-id-row">
-          <span className="case-id">{c.caseId}</span>
-          <StatusBadge status={c.status} />
-        </div>
-        <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
+  <div className="case-card">
+    <div className="case-card-header">
+      <div className="case-card-id-row">
+        <span className="case-id">{c.caseId}</span>
+        <StatusBadge status={c.status} />
       </div>
-      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
-      <p className="case-card-desc">{c.description}</p>
-      <p className="case-card-meta">📍 {c.location?.address}</p>
-      {c.reportedBy && (
-        <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
+      <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
+    </div>
+    <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+    <p className="case-card-desc">{c.description}</p>
+    <p className="case-card-meta">📍 {c.location?.address}</p>
+    {c.reportedBy && (
+      <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
+    )}
+    <div className="case-assign-info">
+      <p className="case-card-meta">
+        🩺 Vet: {c.assignedVet ? <strong>{c.assignedVet.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
+      </p>
+      <p className="case-card-meta">
+        🏠 Shelter: {c.assignedShelter ? <strong>{c.assignedShelter.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
+      </p>
+    </div>
+
+    {/* ── Vet Clinic Location (shown after vet accepts) ── */}
+    {c.vetLocation?.lat && (
+      <div style={{ marginTop: 10, background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
+        <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
+          📍 Vet Clinic Location
+        </p>
+        <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+          {c.vetLocation.address}
+        </p>
+        <a
+          href={`https://www.openstreetmap.org/?mlat=${c.vetLocation.lat}&mlon=${c.vetLocation.lng}#map=17/${c.vetLocation.lat}/${c.vetLocation.lng}`}
+          target="_blank" rel="noreferrer"
+          style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>
+          🗺 View on Map
+        </a>
+      </div>
+    )}
+
+    <div className="case-summary-row">
+      <div className="case-latest-status">
+        <span className="summary-label">Latest:</span>
+        <span className="summary-note">
+          {c.statusHistory?.length > 0
+            ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
+            : 'No updates yet'}
+        </span>
+      </div>
+      {c.statusHistory?.length > 0 && (
+        <button className="history-chip" onClick={() => setHistoryModal(c)}>
+          History ({c.statusHistory.length})
+        </button>
       )}
-      <div className="case-assign-info">
-        <p className="case-card-meta">
-          🩺 Vet: {c.assignedVet ? <strong>{c.assignedVet.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
-        </p>
-        <p className="case-card-meta">
-          🏠 Shelter: {c.assignedShelter ? <strong>{c.assignedShelter.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
-        </p>
-      </div>
-      <div className="case-summary-row">
-        <div className="case-latest-status">
-          <span className="summary-label">Latest:</span>
-          <span className="summary-note">
-            {c.statusHistory?.length > 0
-              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-              : 'No updates yet'}
-          </span>
-        </div>
-        {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>
-            History ({c.statusHistory.length})
+    </div>
+
+    {view === 'assigned' && (
+      <div className="case-card-actions">
+        {c.status === 'assigned' && (
+          <>
+            <button className="btn btn-green" onClick={() => handle(() => acceptCase(c._id), 'Case accepted!')}>Accept Case</button>
+            <button className="btn btn-red" onClick={() => handle(() => declineCase(c._id, { reason: 'Cannot attend' }), 'Case declined')}>Decline</button>
+          </>
+        )}
+        {/* ── FIX: include vet_accepted so button survives after vet accepts ── */}
+        {['volunteer_accepted', 'vet_accepted'].includes(c.status) && (
+          <button className="btn btn-purple" onClick={() => handle(() => markInTransit(c._id), 'Marked as in transit!')}>
+            Mark In Transit
+          </button>
+        )}
+        {c.status === 'in_transit' && (
+          <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>Currently in transit...</span>
+        )}
+        {['volunteer_accepted', 'vet_accepted', 'in_transit', 'at_vet', 'vet_declined', 'treatment_done', 'shelter_declined'].includes(c.status) && (
+          <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
+            Assign Vet & Shelter
           </button>
         )}
       </div>
-      {view === 'assigned' && (
-        <div className="case-card-actions">
-          {c.status === 'assigned' && (
-            <>
-              <button className="btn btn-green" onClick={() => handle(() => acceptCase(c._id), 'Case accepted!')}>Accept Case</button>
-              <button className="btn btn-red" onClick={() => handle(() => declineCase(c._id, { reason: 'Cannot attend' }), 'Case declined')}>Decline</button>
-            </>
-          )}
-          {c.status === 'volunteer_accepted' && (
-            <button className="btn btn-purple" onClick={() => handle(() => markInTransit(c._id), 'Marked as in transit!')}>Mark In Transit</button>
-          )}
-          {c.status === 'in_transit' && (
-            <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>Currently in transit...</span>
-          )}
-          {['volunteer_accepted', 'in_transit', 'at_vet', 'vet_accepted', 'vet_declined', 'treatment_done', 'shelter_declined'].includes(c.status) && (
-            <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
-              Assign Vet & Shelter
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+    )}
+  </div>
+);
 
   const ReportedCard = ({ c }) => (
     <div className="case-card" style={{ borderLeftColor: '#7c3aed' }}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, getMyCases, acceptVetCase, declineVetCase } from '../api';
+import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, getMyCases, acceptVetCase, declineVetCase, updateVetLocation } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import LocationPickerModal from '../components/LocationPickerModal';
@@ -55,7 +55,7 @@ export default function VetDashboard() {
   const [msg, setMsg] = useState('');
   const [medModal, setMedModal] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
-  const [locationModal, setLocationModal] = useState(null);
+  const [locationUpdateModal, setLocationUpdateModal] = useState(null); // ← for pinning after accept
   const [medData, setMedData] = useState({ diagnosis: '', treatment: '', medications: '', notes: '' });
   const [medFiles, setMedFiles] = useState([]);
   const [view, setView] = useState('dashboard');
@@ -102,15 +102,27 @@ export default function VetDashboard() {
     load();
   };
 
-  const handleVetAccept = async (location) => {
+  // ── Accept case (no location — just accepts) ──
+  const handleVetAccept = async (caseId) => {
     try {
-      await acceptVetCase(locationModal._id, { location });
-      setMsg('Case accepted! Your clinic location has been shared with the volunteer.');
-      setLocationModal(null);
+      await acceptVetCase(caseId);
+      setMsg('Case accepted! Now pin your clinic location so the volunteer knows where to bring the animal.');
       load();
     } catch (err) {
       setMsg(err.response?.data?.message || 'Failed to accept case.');
-      setLocationModal(null);
+    }
+  };
+
+  // ── Pin/update location separately ──
+  const handleUpdateLocation = async (location) => {
+    try {
+      await updateVetLocation(locationUpdateModal._id, { location });
+      setMsg('Clinic location pinned! The volunteer can now see your location.');
+      setLocationUpdateModal(null);
+      load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Failed to update location.');
+      setLocationUpdateModal(null);
     }
   };
 
@@ -118,7 +130,7 @@ export default function VetDashboard() {
     if (!medData.diagnosis || !medData.treatment) return;
     const formData = new FormData();
     Object.entries(medData).forEach(([k, v]) => formData.append(k, v));
-    medFiles.forEach(f => formData.append('files', f));
+    medFiles.forEach(f => formData.append('documents', f));
     await addMedicalRecord(medModal, formData);
     setMsg('Medical record added!');
     setMedModal(null);
@@ -148,9 +160,10 @@ export default function VetDashboard() {
       )}
 
       <div className="case-card-actions">
+        {/* Step 1: Accept or Decline */}
         {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
           <>
-            <button className="btn btn-green" onClick={() => setLocationModal(c)}>
+            <button className="btn btn-green" onClick={() => handleVetAccept(c._id)}>
               Accept Case
             </button>
             <button className="btn btn-red"
@@ -159,6 +172,14 @@ export default function VetDashboard() {
             </button>
           </>
         )}
+
+        {/* Step 2: Pin location after accepting */}
+        {['vet_accepted', 'at_vet'].includes(c.status) && (
+          <button className="btn btn-green" onClick={() => setLocationUpdateModal(c)}>
+            📍 {c.vetLocation?.lat ? 'Update Clinic Location' : 'Pin My Clinic Location'}
+          </button>
+        )}
+
         {c.status === 'vet_accepted' && (
           <button className="btn btn-orange"
             onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>
@@ -179,6 +200,7 @@ export default function VetDashboard() {
         )}
       </div>
 
+      {/* Pinned clinic location display */}
       {c.vetLocation?.lat && (
         <div style={{ marginTop: 10, background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
           <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
@@ -526,16 +548,16 @@ export default function VetDashboard() {
           </div>
         )}
 
-        {/* Location Picker Modal */}
-        {locationModal && (
+        {/* ── Pin/Update Clinic Location Modal ── */}
+        {locationUpdateModal && (
           <LocationPickerModal
-            title="Pin Your Clinic Location"
-            onConfirm={handleVetAccept}
-            onCancel={() => setLocationModal(null)}
+            title={locationUpdateModal.vetLocation?.lat ? 'Update Clinic Location' : 'Pin Your Clinic Location'}
+            onConfirm={handleUpdateLocation}
+            onCancel={() => setLocationUpdateModal(null)}
           />
         )}
 
       </div>
     </div>
   );
-}     
+}

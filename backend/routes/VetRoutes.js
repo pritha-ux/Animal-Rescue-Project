@@ -2,7 +2,7 @@
 import express from 'express';
 import { protect, roleCheck } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
-import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, acceptVetCase, declineVetCase } from '../controllers/VetController.js'
+import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, acceptVetCase, declineVetCase, updateVetLocation } from '../controllers/VetController.js'
 
 const router = express.Router();
 router.get('/cases', protect, roleCheck('veterinarian'), getVetCases);
@@ -11,5 +11,8 @@ router.put('/cases/:id/decline', protect, roleCheck('veterinarian'), declineVetC
 router.put('/cases/:id/arrived', protect, roleCheck('veterinarian'), markAtVet);
 router.post('/cases/:id/medical', protect, roleCheck('veterinarian'), upload.array('documents', 5), addMedicalRecord);
 router.put('/cases/:id/treatment-done', protect, roleCheck('veterinarian'), markTreatmentDone);
+
+
+router.put('/cases/:id/location', protect, roleCheck('veterinarian'), updateVetLocation);
 
 export default router;

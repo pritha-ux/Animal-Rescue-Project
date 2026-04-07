@@ -9,7 +9,7 @@ export const getAssignedCases = async (req, res) => {
       .populate('assignedVet', 'name')
       .populate('assignedShelter', 'name')
       .sort({ createdAt: -1 });
-
+      cases.forEach(c => console.log(c.caseId, 'vetLocation:', c.vetLocation));
     res.json(cases);
   } catch (err) {
     res.status(500).json({ message: err.message });

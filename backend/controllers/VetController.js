@@ -13,10 +13,12 @@ export const getVetCases = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 export const acceptVetCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
+
     if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
 
@@ -27,6 +29,7 @@ export const acceptVetCase = async (req, res) => {
       note: 'Veterinarian accepted the case',
       timestamp: new Date(),
     });
+
     await caseData.save();
 
     await Notification.create({
@@ -42,6 +45,42 @@ export const acceptVetCase = async (req, res) => {
   }
 };
 
+// ── NEW: Vet pins clinic location separately after accepting ──
+export const updateVetLocation = async (req, res) => {
+  try {
+    const { location } = req.body;
+    const caseData = await Case.findById(req.params.id);
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+    if (String(caseData.assignedVet) !== String(req.user._id))
+      return res.status(403).json({ message: 'Not assigned to this case' });
+
+    if (!location?.lat || !location?.lng)
+      return res.status(400).json({ message: 'Invalid location — lat and lng required' });
+
+    caseData.vetLocation = {
+      lat: location.lat,
+      lng: location.lng,
+      address: location.address || ''
+    };
+
+    await caseData.save();
+
+    // Notify volunteer that vet pinned location
+    if (caseData.assignedVolunteer) {
+      await Notification.create({
+        caseId: caseData._id,
+        recipient: caseData.assignedVolunteer,
+        message: `Vet has pinned their clinic location for case ${caseData.caseId}.`,
+        type: 'status_update',
+      });
+    }
+
+    res.json({ message: 'Clinic location updated', case: caseData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export const declineVetCase = async (req, res) => {
   try {
     const { reason } = req.body;
@@ -50,7 +89,6 @@ export const declineVetCase = async (req, res) => {
     if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
 
-    // Clear vet assignment — goes back to volunteer to reassign
     caseData.assignedVet = null;
     caseData.status = 'vet_declined';
     caseData.statusHistory.push({
@@ -61,7 +99,6 @@ export const declineVetCase = async (req, res) => {
     });
     await caseData.save();
 
-    // Notify volunteer to reassign
     if (caseData.assignedVolunteer) {
       await Notification.create({
         caseId: caseData._id,
@@ -77,7 +114,6 @@ export const declineVetCase = async (req, res) => {
   }
 };
 
-// Vet: Update status to at_vet
 export const markAtVet = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -112,20 +148,14 @@ export const addMedicalRecord = async (req, res) => {
     const documents = req.files ? req.files.map(f => f.filename) : [];
 
     const caseData = await Case.findById(req.params.id);
-
-    if (!caseData) {
-      return res.status(404).json({ message: 'Case not found' });
-    }
-
-    if (String(caseData.assignedVet) !== String(req.user._id)) {
+    if (!caseData) return res.status(404).json({ message: 'Case not found' });
+    if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
-    }
 
-    if (!['vet_accepted', 'at_vet', 'in_transit', 'treatment_done'].includes(caseData.status)) {
+    if (!['vet_accepted', 'at_vet', 'in_transit', 'treatment_done'].includes(caseData.status))
       return res.status(400).json({ message: 'Cannot update medical record at this stage' });
-    }
 
-    const newRecord = {
+    caseData.medicalRecords.push({
       diagnosis,
       treatment,
       medications,
@@ -133,9 +163,7 @@ export const addMedicalRecord = async (req, res) => {
       documents,
       updatedBy: req.user._id,
       updatedAt: new Date(),
-    };
-
-    caseData.medicalRecords.push(newRecord);
+    });
 
     caseData.statusHistory.push({
       status: caseData.status,
@@ -153,17 +181,12 @@ export const addMedicalRecord = async (req, res) => {
       type: 'status_update',
     });
 
-    res.json({
-      message: 'Medical record updated successfully',
-      medicalRecords: caseData.medicalRecords,
-      case: caseData
-    });
-
+    res.json({ message: 'Medical record updated successfully', medicalRecords: caseData.medicalRecords, case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-// Vet: Mark treatment done, ready for shelter
+
 export const markTreatmentDone = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -171,7 +194,6 @@ export const markTreatmentDone = async (req, res) => {
     if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
 
-    // ← change status so buttons hide
     caseData.status = 'treatment_done';
     caseData.statusHistory.push({
       status: 'treatment_done',
@@ -201,4 +223,3 @@ export const markTreatmentDone = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
