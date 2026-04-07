@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getVetCases, markAtVet, addMedicalRecord, markTreatmentDone, getMyCases, acceptVetCase, declineVetCase } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
+import LocationPickerModal from '../components/LocationPickerModal';
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
@@ -38,15 +39,11 @@ const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
   if (totalPages <= 1) return null;
   return (
     <div className="pagination-row">
-      <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>
-        ← Prev
-      </button>
+      <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>← Prev</button>
       <span className="pagination-info">
         Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
       </span>
-      <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>
-        Next →
-      </button>
+      <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>Next →</button>
     </div>
   );
 };
@@ -58,15 +55,13 @@ export default function VetDashboard() {
   const [msg, setMsg] = useState('');
   const [medModal, setMedModal] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
+  const [locationModal, setLocationModal] = useState(null); // ← case object to accept
   const [medData, setMedData] = useState({ diagnosis: '', treatment: '', medications: '', notes: '' });
   const [medFiles, setMedFiles] = useState([]);
-  const [view, setView] = useState('dashboard'); // 'dashboard' | 'assigned' | 'reported'
-
-  // Pagination
+  const [view, setView] = useState('dashboard');
   const [assignedPage, setAssignedPage] = useState(1);
   const [reportedPage, setReportedPage] = useState(1);
 
-  // Sort most recently updated first
   const sortedCases = [...cases].sort((a, b) => {
     const aTime = a.statusHistory?.length > 0 ? new Date(a.statusHistory[a.statusHistory.length - 1].timestamp) : new Date(a.createdAt);
     const bTime = b.statusHistory?.length > 0 ? new Date(b.statusHistory[b.statusHistory.length - 1].timestamp) : new Date(b.createdAt);
@@ -82,14 +77,8 @@ export default function VetDashboard() {
   const assignedTotalPages = Math.ceil(sortedCases.length / CASES_PER_PAGE);
   const reportedTotalPages = Math.ceil(sortedMyCases.length / CASES_PER_PAGE);
 
-  const pagedAssigned = sortedCases.slice(
-    (assignedPage - 1) * CASES_PER_PAGE,
-    assignedPage * CASES_PER_PAGE
-  );
-  const pagedReported = sortedMyCases.slice(
-    (reportedPage - 1) * CASES_PER_PAGE,
-    reportedPage * CASES_PER_PAGE
-  );
+  const pagedAssigned = sortedCases.slice((assignedPage - 1) * CASES_PER_PAGE, assignedPage * CASES_PER_PAGE);
+  const pagedReported = sortedMyCases.slice((reportedPage - 1) * CASES_PER_PAGE, reportedPage * CASES_PER_PAGE);
 
   const load = () => {
     setLoading(true);
@@ -113,6 +102,19 @@ export default function VetDashboard() {
     load();
   };
 
+  // ── Accept with location ──
+  const handleVetAccept = async (location) => {
+    try {
+      await acceptVetCase(locationModal._id, { location });
+      setMsg('Case accepted! Your clinic location has been shared with the volunteer.');
+      setLocationModal(null);
+      load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Failed to accept case.');
+      setLocationModal(null);
+    }
+  };
+
   const handleAddMedical = async () => {
     if (!medData.diagnosis || !medData.treatment) return;
     const formData = new FormData();
@@ -126,13 +128,8 @@ export default function VetDashboard() {
     load();
   };
 
-  // Pending = needs accept/decline action
-  const pendingCases = sortedCases.filter(c =>
-    ['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status)
-  );
-  const activeCases = sortedCases.filter(c =>
-    ['vet_accepted', 'at_vet'].includes(c.status)
-  );
+  const pendingCases = sortedCases.filter(c => ['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status));
+  const activeCases  = sortedCases.filter(c => ['vet_accepted', 'at_vet'].includes(c.status));
 
   const CaseCard = ({ c }) => (
     <div className="case-card">
@@ -151,12 +148,11 @@ export default function VetDashboard() {
         <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
       )}
 
-      {/* Actions — shown at top of interactions, before records */}
       <div className="case-card-actions">
         {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
           <>
-            <button className="btn btn-green"
-              onClick={() => handle(() => acceptVetCase(c._id), 'Case accepted!')}>
+            {/* ── Accept opens map picker ── */}
+            <button className="btn btn-green" onClick={() => setLocationModal(c)}>
               Accept Case
             </button>
             <button className="btn btn-red"
@@ -185,7 +181,24 @@ export default function VetDashboard() {
         )}
       </div>
 
-      {/* Medical Records */}
+      {/* Show pinned clinic location if set */}
+      {c.vetLocation?.lat && (
+        <div style={{ marginTop: 10, background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
+          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
+            📍 Your Pinned Clinic Location
+          </p>
+          <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
+            {c.vetLocation.address}
+          </p>
+          
+            href={`https://www.openstreetmap.org/?mlat=${c.vetLocation.lat}&mlon=${c.vetLocation.lng}#map=17/${c.vetLocation.lat}/${c.vetLocation.lng}`}
+            target="_blank" rel="noreferrer"
+            style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>
+            🗺 View on Map
+          </a>
+        </div>
+      )}
+
       {c.medicalRecords?.length > 0 && (
         <div style={{ marginTop: 12, background: '#fff7ed', borderRadius: 12, padding: '12px 16px', border: '1px solid #fed7aa' }}>
           <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#c2410c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -278,10 +291,8 @@ export default function VetDashboard() {
           </div>
         )}
 
-        {/* DASHBOARD VIEW */}
         {view === 'dashboard' && (
           <>
-            {/* Stats Row */}
             <div className="dash-stats-row">
               <div className="dash-stat-box blue">
                 <span className="dash-stat-num">{cases.length}</span>
@@ -301,7 +312,6 @@ export default function VetDashboard() {
               </div>
             </div>
 
-            {/* Quick Action Cards */}
             <div className="quick-action-grid">
               <div className="quick-action-card" onClick={() => goToView('assigned')}>
                 <div className="quick-action-icon" style={{ background: '#fff7ed' }}>🩺</div>
@@ -321,7 +331,6 @@ export default function VetDashboard() {
               </div>
             </div>
 
-            {/* Recent Assigned Cases Preview */}
             {sortedCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
@@ -339,7 +348,6 @@ export default function VetDashboard() {
               </>
             )}
 
-            {/* Recent Reported Cases Preview */}
             {sortedMyCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
@@ -367,7 +375,6 @@ export default function VetDashboard() {
           </>
         )}
 
-        {/* ASSIGNED CASES VIEW */}
         {view === 'assigned' && (
           <>
             <div className="section-header">
@@ -403,7 +410,6 @@ export default function VetDashboard() {
           </>
         )}
 
-        {/* REPORTED CASES VIEW */}
         {view === 'reported' && (
           <>
             <div className="section-header">
@@ -522,7 +528,18 @@ export default function VetDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── Location Picker Modal ── */}
+        {locationModal && (
+          <LocationPickerModal
+            title="Pin Your Clinic Location"
+            onConfirm={handleVetAccept}
+            onCancel={() => setLocationModal(null)}
+          />
+        )}
+
       </div>
     </div>
   );
-}
+}  
+    
