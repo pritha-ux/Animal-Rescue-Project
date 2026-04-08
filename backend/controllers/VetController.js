@@ -1,7 +1,19 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 
-// Vet: Get assigned cases
+// ── Helper: notify all admins ──
+const notifyAdmin = async (caseId, message) => {
+  try {
+    const admins = await User.find({ role: 'admin' }, '_id');
+    await Promise.all(admins.map(admin =>
+      Notification.create({ caseId, recipient: admin._id, message, type: 'status_update' })
+    ));
+  } catch (err) {
+    console.error('Failed to notify admin:', err.message);
+  }
+};
+
 export const getVetCases = async (req, res) => {
   try {
     const cases = await Case.find({ assignedVet: req.user._id })
@@ -18,7 +30,6 @@ export const acceptVetCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
-
     if (String(caseData.assignedVet) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this case' });
 
@@ -29,7 +40,6 @@ export const acceptVetCase = async (req, res) => {
       note: 'Veterinarian accepted the case',
       timestamp: new Date(),
     });
-
     await caseData.save();
 
     await Notification.create({
@@ -39,13 +49,14 @@ export const acceptVetCase = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Vet accepted case ${caseData.caseId}`);
+
     res.json({ message: 'Case accepted', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// ── NEW: Vet pins clinic location separately after accepting ──
 export const updateVetLocation = async (req, res) => {
   try {
     const { location } = req.body;
@@ -62,10 +73,8 @@ export const updateVetLocation = async (req, res) => {
       lng: location.lng,
       address: location.address || ''
     };
-
     await caseData.save();
 
-    // Notify volunteer that vet pinned location
     if (caseData.assignedVolunteer) {
       await Notification.create({
         caseId: caseData._id,
@@ -74,6 +83,8 @@ export const updateVetLocation = async (req, res) => {
         type: 'status_update',
       });
     }
+
+    await notifyAdmin(caseData._id, `Vet pinned clinic location for case ${caseData.caseId}`);
 
     res.json({ message: 'Clinic location updated', case: caseData });
   } catch (err) {
@@ -108,6 +119,8 @@ export const declineVetCase = async (req, res) => {
       });
     }
 
+    await notifyAdmin(caseData._id, `Vet declined case ${caseData.caseId}`);
+
     res.json({ message: 'Case declined', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -136,6 +149,8 @@ export const markAtVet = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Animal arrived at vet clinic for case ${caseData.caseId}`);
+
     res.json({ message: 'Status updated to at_vet', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -156,22 +171,15 @@ export const addMedicalRecord = async (req, res) => {
       return res.status(400).json({ message: 'Cannot update medical record at this stage' });
 
     caseData.medicalRecords.push({
-      diagnosis,
-      treatment,
-      medications,
-      notes,
-      documents,
-      updatedBy: req.user._id,
-      updatedAt: new Date(),
+      diagnosis, treatment, medications, notes, documents,
+      updatedBy: req.user._id, updatedAt: new Date(),
     });
-
     caseData.statusHistory.push({
       status: caseData.status,
       updatedBy: req.user._id,
       note: `Medical update added: ${diagnosis}`,
       timestamp: new Date(),
     });
-
     await caseData.save();
 
     await Notification.create({
@@ -180,6 +188,8 @@ export const addMedicalRecord = async (req, res) => {
       message: `New medical update for case ${caseData.caseId}: ${diagnosis}`,
       type: 'status_update',
     });
+
+    await notifyAdmin(caseData._id, `Medical record added for case ${caseData.caseId}: ${diagnosis}`);
 
     res.json({ message: 'Medical record updated successfully', medicalRecords: caseData.medicalRecords, case: caseData });
   } catch (err) {
@@ -217,6 +227,8 @@ export const markTreatmentDone = async (req, res) => {
       message: `Treatment for case ${caseData.caseId} is complete.`,
       type: 'status_update',
     });
+
+    await notifyAdmin(caseData._id, `Treatment completed for case ${caseData.caseId}`);
 
     res.json({ message: 'Treatment marked as done', case: caseData });
   } catch (err) {

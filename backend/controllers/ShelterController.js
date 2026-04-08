@@ -1,5 +1,18 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+
+// ── Helper: notify all admins ──
+const notifyAdmin = async (caseId, message) => {
+  try {
+    const admins = await User.find({ role: 'admin' }, '_id');
+    await Promise.all(admins.map(admin =>
+      Notification.create({ caseId, recipient: admin._id, message, type: 'status_update' })
+    ));
+  } catch (err) {
+    console.error('Failed to notify admin:', err.message);
+  }
+};
 
 export const getShelterCases = async (req, res) => {
   try {
@@ -13,6 +26,7 @@ export const getShelterCases = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 export const acceptShelterCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -36,11 +50,14 @@ export const acceptShelterCase = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Shelter accepted case ${caseData.caseId}`);
+
     res.json({ message: 'Case accepted', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 export const updateShelterLocation = async (req, res) => {
   try {
     const { location } = req.body;
@@ -68,6 +85,8 @@ export const updateShelterLocation = async (req, res) => {
       });
     }
 
+    await notifyAdmin(caseData._id, `Shelter pinned location for case ${caseData.caseId}`);
+
     res.json({ message: 'Shelter location updated', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -82,7 +101,6 @@ export const declineShelterCase = async (req, res) => {
     if (String(caseData.assignedShelter) !== String(req.user._id))
       return res.status(403).json({ message: 'Not assigned to this shelter' });
 
-    // Clear shelter — goes back to volunteer to reassign
     caseData.assignedShelter = null;
     caseData.status = 'shelter_declined';
     caseData.statusHistory.push({
@@ -93,7 +111,6 @@ export const declineShelterCase = async (req, res) => {
     });
     await caseData.save();
 
-    // Notify volunteer to reassign
     if (caseData.assignedVolunteer) {
       await Notification.create({
         caseId: caseData._id,
@@ -102,6 +119,8 @@ export const declineShelterCase = async (req, res) => {
         type: 'alert',
       });
     }
+
+    await notifyAdmin(caseData._id, `Shelter declined case ${caseData.caseId}`);
 
     res.json({ message: 'Case declined', case: caseData });
   } catch (err) {
@@ -132,6 +151,8 @@ export const markAtShelter = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Animal admitted to shelter for case ${caseData.caseId}`);
+
     res.json({ message: 'Animal admitted to shelter', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -144,12 +165,7 @@ export const updateCareDetails = async (req, res) => {
     const caseData = await Case.findById(req.params.id);
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
 
-    caseData.shelterDetails = {
-      ...caseData.shelterDetails,
-      diet,
-      health_status,
-      notes
-    };
+    caseData.shelterDetails = { ...caseData.shelterDetails, diet, health_status, notes };
     caseData.statusHistory.push({
       status: caseData.status,
       updatedBy: req.user._id,
@@ -157,6 +173,8 @@ export const updateCareDetails = async (req, res) => {
       timestamp: new Date(),
     });
     await caseData.save();
+
+    await notifyAdmin(caseData._id, `Care details updated for case ${caseData.caseId}`);
 
     res.json({ message: 'Care details updated', case: caseData });
   } catch (err) {
@@ -188,6 +206,8 @@ export const markAdopted = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Animal from case ${caseData.caseId} adopted by ${adopterName}`);
+
     res.json({ message: 'Animal marked as adopted', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -217,6 +237,8 @@ export const markReturnedToOwner = async (req, res) => {
       message: `The animal from case ${caseData.caseId} has been returned to its owner.`,
       type: 'status_update',
     });
+
+    await notifyAdmin(caseData._id, `Animal from case ${caseData.caseId} returned to owner: ${ownerName}`);
 
     res.json({ message: 'Animal returned to owner', case: caseData });
   } catch (err) {
