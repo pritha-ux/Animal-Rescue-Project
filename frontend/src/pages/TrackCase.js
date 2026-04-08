@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { trackCase } from '../api';
 import StatusBadge from '../components/StatusBadge';
 import '../styles/Cases.css';
+import '../styles/Modal.css';
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -38,6 +39,7 @@ export default function TrackCase() {
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const navigate = useNavigate();
 
   const handleTrack = async (e) => {
@@ -105,7 +107,6 @@ export default function TrackCase() {
             <div className="track-card">
               <div className="team-section">
                 <h3>👥 Assigned Team</h3>
-
                 {caseData?.assignedVolunteer ? (
                   <div className="team-row">
                     🙋 Volunteer: {caseData.assignedVolunteer.name} • {caseData.assignedVolunteer.phone || 'No phone'}
@@ -113,7 +114,6 @@ export default function TrackCase() {
                 ) : (
                   <div className="team-row muted">🙋 Volunteer: Not assigned yet</div>
                 )}
-
                 {caseData?.assignedVet ? (
                   <div className="team-row">
                     🩺 Veterinarian: {caseData.assignedVet.name} • {caseData.assignedVet.phone || 'No phone'}
@@ -121,7 +121,6 @@ export default function TrackCase() {
                 ) : (
                   <div className="team-row muted">🩺 Veterinarian: Not assigned yet</div>
                 )}
-
                 {caseData?.assignedShelter ? (
                   <div className="team-row">
                     🏠 Shelter: {caseData.assignedShelter.name} • {caseData.assignedShelter.phone || 'No phone'}
@@ -132,40 +131,51 @@ export default function TrackCase() {
               </div>
             </div>
 
-            {/* Timeline (Always show full) */}
+            {/* ── Status History — compact + modal ── */}
             <div className="track-card">
-              <div className="timeline">
-                <h3 style={{ marginBottom: 14 }}>📋 Status History</h3>
-
-                {groupedHistory.length === 0 && (
-                  <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No status updates yet.</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <h3 style={{ margin: 0 }}>📋 Status History</h3>
+                {groupedHistory.length > 0 && (
+                  <button
+                    onClick={() => setShowHistory(true)}
+                    style={{
+                      fontSize: '0.8rem', fontWeight: 700, color: '#fff',
+                      background: '#ea580c', border: 'none', borderRadius: 8,
+                      padding: '6px 14px', cursor: 'pointer',
+                    }}>
+                    View All ({groupedHistory.length})
+                  </button>
                 )}
-
-                {groupedHistory.map((group, i) => (
-                  <div key={i} className="timeline-item">
-                    <div className="timeline-dot-col">
-                      <div className="timeline-dot" />
-                      {i < groupedHistory.length - 1 && <div className="timeline-line" />}
-                    </div>
-                    <div className="timeline-content">
-                      <StatusBadge status={group.status} />
-                      {group.events.map((ev, j) => (
-                        <div
-                          key={j}
-                          style={{
-                            marginTop: j === 0 ? 6 : 8,
-                            paddingLeft: j > 0 ? 10 : 0,
-                            borderLeft: j > 0 ? '2px solid #f3f4f6' : 'none'
-                          }}
-                        >
-                          {ev.note && <p className="timeline-note">{ev.note}</p>}
-                          <p className="timeline-time">{formatDateTime(ev.timestamp)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
               </div>
+
+              {groupedHistory.length === 0 && (
+                <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No status updates yet.</p>
+              )}
+
+              {/* Show only latest 2 inline */}
+              {groupedHistory.slice(-2).reverse().map((group, i, arr) => (
+                <div key={i} className="timeline-item">
+                  <div className="timeline-dot-col">
+                    <div className="timeline-dot" />
+                    {i < arr.length - 1 && <div className="timeline-line" />}
+                  </div>
+                  <div className="timeline-content">
+                    <StatusBadge status={group.status} />
+                    {group.events.slice(-1).map((ev, j) => (
+                      <div key={j} style={{ marginTop: 6 }}>
+                        {ev.note && <p className="timeline-note">{ev.note}</p>}
+                        <p className="timeline-time">{formatDateTime(ev.timestamp)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {groupedHistory.length > 2 && (
+                <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: 10, fontStyle: 'italic' }}>
+                  +{groupedHistory.length - 2} more updates — click "View All" to see full history
+                </p>
+              )}
             </div>
 
             {/* Medical Records */}
@@ -186,7 +196,7 @@ export default function TrackCase() {
             {/* Shelter Care Details */}
             {caseData?.shelterDetails && (
               <div className="track-card">
-                <h3 style={{ fontWeight: 700, marginBottom: 14 }}>Shelter Care Details</h3>
+                <h3 style={{ fontWeight: 700, marginBottom: 14 }}>🏠 Shelter Care Details</h3>
                 {caseData.shelterDetails.cage_number && <p>Cage: {caseData.shelterDetails.cage_number}</p>}
                 {caseData.shelterDetails.diet && <p>Diet: {caseData.shelterDetails.diet}</p>}
                 {caseData.shelterDetails.health_status && <p>Health: {caseData.shelterDetails.health_status}</p>}
@@ -202,13 +212,59 @@ export default function TrackCase() {
                 {caseData.outcomeDetails?.ownerName && <p>Returned to: {caseData.outcomeDetails.ownerName}</p>}
               </div>
             )}
-
           </div>
         )}
 
         <div className="track-back">
           <button onClick={() => navigate(-1)}>← Back</button>
         </div>
+
+        {/* ── Full History Modal ── */}
+        {showHistory && caseData && (
+          <div className="modal-overlay" onClick={() => setShowHistory(false)}>
+            <div className="modal history-modal" onClick={e => e.stopPropagation()}>
+              <div className="history-modal-header">
+                <div>
+                  <h3 className="modal-title">Case Timeline</h3>
+                  <p className="modal-subtitle">
+                    <span className="case-id">{caseData.caseId}</span> — {caseData.animalName || 'Unknown'} ({caseData.animalType})
+                  </p>
+                </div>
+                <button className="history-modal-close" onClick={() => setShowHistory(false)}>✕</button>
+              </div>
+              <div className="timeline-wrapper">
+                {groupedHistory.map((group, i) => (
+                  <div key={i} className="timeline-row">
+                    <div className="timeline-left">
+                      <div className={`timeline-dot ${i === groupedHistory.length - 1 ? 'active' : ''}`} />
+                      {i < groupedHistory.length - 1 && <div className="timeline-line" />}
+                    </div>
+                    <div className="timeline-body">
+                      <div className="timeline-top">
+                        <StatusBadge status={group.status} />
+                        <span className="timeline-time">{formatDateTime(group.events[0].timestamp)}</span>
+                      </div>
+                      {group.events.map((ev, j) => (
+                        <div key={j} style={{
+                          marginTop: j === 0 ? 4 : 8,
+                          paddingLeft: j > 0 ? 10 : 0,
+                          borderLeft: j > 0 ? '2px solid #f3f4f6' : 'none'
+                        }}>
+                          {ev.note && <p className="timeline-note">{ev.note}</p>}
+                          {j > 0 && <p className="timeline-time">{formatDateTime(ev.timestamp)}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-gray" onClick={() => setShowHistory(false)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
