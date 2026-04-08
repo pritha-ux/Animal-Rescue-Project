@@ -52,6 +52,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [msg, setMsg] = useState('');
+  const [historyModal, setHistoryModal] = useState(null); // ← INSIDE component
 
   useEffect(() => {
     Promise.all([
@@ -90,6 +91,73 @@ export default function AdminDashboard() {
       setAssigning(false);
     }
   };
+
+  const generatePDF = async () => {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+
+  const doc = new jsPDF();
+
+  // Header
+  doc.setFontSize(20);
+  doc.setTextColor(234, 88, 12);
+  doc.text('Animal Rescue System', 14, 18);
+
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text('Case Report', 14, 26);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+
+  doc.setDrawColor(234, 88, 12);
+  doc.setLineWidth(0.5);
+  doc.line(14, 36, 196, 36);
+
+  doc.setFontSize(10);
+  doc.setTextColor(30);
+  doc.text(`Total Cases: ${stats.totalCases}`, 14, 44);
+  doc.text(`Volunteers: ${stats.staff.totalVolunteers}`, 70, 44);
+  doc.text(`Veterinarians: ${stats.staff.totalVets}`, 110, 44);
+  doc.text(`Shelter Staff: ${stats.staff.totalShelterStaff}`, 155, 44);
+
+  autoTable(doc, {
+    startY: 52,
+    head: [['Case ID', 'Animal', 'Status', 'Volunteer', 'Location', 'Reported At']],
+    body: cases.map(c => [
+      c.caseId,
+      `${c.animalName || 'Unknown'} (${c.animalType})`,
+      c.status.replace(/_/g, ' '),
+      c.assignedVolunteer?.name || 'Not assigned',
+      (c.location?.address || '').split(',')[0],
+      new Date(c.createdAt).toLocaleDateString(),
+    ]),
+    headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+    alternateRowStyles: { fillColor: [255, 247, 237] },
+    styles: { fontSize: 8, cellPadding: 3 },
+    columnStyles: {
+      0: { cellWidth: 24 },
+      1: { cellWidth: 36 },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 40 },
+      5: { cellWidth: 24 },
+    },
+  });
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(
+      `Animal Rescue System — Page ${i} of ${pageCount}`,
+      14,
+      doc.internal.pageSize.height - 10
+    );
+  }
+
+  doc.save(`rescue-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+};
 
   const donutData = stats ? Object.entries(stats.statusBreakdown)
     .filter(([, v]) => v > 0)
@@ -134,8 +202,18 @@ export default function AdminDashboard() {
     <div className="dashboard-page">
       <Navbar />
       <div className="dashboard-container">
+
+        {/* Header with Generate Report button */}
         <div className="dashboard-header">
-          <h1 className="dashboard-title">Admin Dashboard</h1>
+          <div>
+            <h1 className="dashboard-title">Admin Dashboard</h1>
+            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>
+              System overview and case management.
+            </p>
+          </div>
+          <button className="btn btn-orange" onClick={generatePDF}>
+            📄 Generate Report
+          </button>
         </div>
 
         {msg && (
@@ -189,12 +267,9 @@ export default function AdminDashboard() {
                     <PieChart>
                       <Pie
                         data={donutData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={95}
-                        paddingAngle={3}
-                        dataKey="value"
+                        cx="50%" cy="50%"
+                        innerRadius={60} outerRadius={95}
+                        paddingAngle={3} dataKey="value"
                       >
                         {donutData.map((entry, i) => (
                           <Cell key={i} fill={entry.color} />
@@ -205,8 +280,7 @@ export default function AdminDashboard() {
                         contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }}
                       />
                       <Legend
-                        iconType="circle"
-                        iconSize={8}
+                        iconType="circle" iconSize={8}
                         formatter={(value) => (
                           <span style={{ fontSize: '0.75rem', color: '#374151', textTransform: 'capitalize' }}>{value}</span>
                         )}
@@ -231,12 +305,9 @@ export default function AdminDashboard() {
                         formatter={(v) => [v, 'Cases']}
                       />
                       <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#ea580c"
-                        strokeWidth={2.5}
-                        dot={{ fill: '#ea580c', r: 4 }}
-                        activeDot={{ r: 6 }}
+                        type="monotone" dataKey="count"
+                        stroke="#ea580c" strokeWidth={2.5}
+                        dot={{ fill: '#ea580c', r: 4 }} activeDot={{ r: 6 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -320,8 +391,14 @@ export default function AdminDashboard() {
                       <td>{c.assignedVolunteer?.name || <span style={{ color: '#d1d5db' }}>Not assigned</span>}</td>
                       <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatDateTime(c.createdAt)}</td>
                       <td>
+                        {/* History — always visible */}
+                        <button className="action-link blue"
+                          onClick={() => setHistoryModal(c)}>
+                          History
+                        </button>
+
                         {!noReassignStatuses.includes(c.status) && (
-                          <button className="action-link blue"
+                          <button className="action-link blue" style={{ marginLeft: 8 }}
                             onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>
                             Assign
                           </button>
@@ -337,10 +414,10 @@ export default function AdminDashboard() {
                           </button>
                         )}
                         {completedStatuses.includes(c.status) && (
-                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>Completed</span>
+                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>✅ Completed</span>
                         )}
                         {closedStatus.includes(c.status) && (
-                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem' }}> Closed</span>
+                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>🔒 Closed</span>
                         )}
                       </td>
                     </tr>
@@ -408,7 +485,49 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* HISTORY MODAL */}
+        {historyModal && (
+          <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
+            <div className="modal history-modal" onClick={e => e.stopPropagation()}>
+              <div className="history-modal-header">
+                <div>
+                  <h3 className="modal-title">Case Timeline</h3>
+                  <p className="modal-subtitle">
+                    <span className="case-id">{historyModal.caseId}</span> — {historyModal.animalName || 'Unknown'} ({historyModal.animalType})
+                  </p>
+                </div>
+                <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
+              </div>
+              <div className="timeline-wrapper">
+                {historyModal.statusHistory?.length > 0 ? (
+                  historyModal.statusHistory.map((h, i) => (
+                    <div key={i} className="timeline-row">
+                      <div className="timeline-left">
+                        <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
+                        {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
+                      </div>
+                      <div className="timeline-body">
+                        <div className="timeline-top">
+                          <StatusBadge status={h.status} />
+                          <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
+                        </div>
+                        {h.note && <p className="timeline-note">{h.note}</p>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '40px 0' }}>No history yet</p>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-gray" onClick={() => setHistoryModal(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
-} 
+}
