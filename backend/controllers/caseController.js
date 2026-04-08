@@ -1,5 +1,23 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+
+// ── Helper: notify all admins ──
+const notifyAdmin = async (caseId, message) => {
+  try {
+    const admins = await User.find({ role: 'admin' }, '_id');
+    await Promise.all(admins.map(admin =>
+      Notification.create({
+        caseId,
+        recipient: admin._id,
+        message,
+        type: 'status_update',
+      })
+    ));
+  } catch (err) {
+    console.error('Failed to notify admin:', err.message);
+  }
+};
 
 export const reportCase = async (req, res) => {
   try {
@@ -21,6 +39,10 @@ export const reportCase = async (req, res) => {
     });
 
     await caseData.save();
+
+    // Notify admin of new case
+    await notifyAdmin(caseData._id, `New case ${caseData.caseId} reported — ${animalType} at ${address}`);
+
     res.status(201).json({ message: 'Case reported successfully', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -31,9 +53,9 @@ export const trackCase = async (req, res) => {
   try {
     const caseData = await Case.findOne({ caseId: req.params.caseId })
       .populate('reportedBy', 'name email')
-      .populate('assignedVolunteer', 'name phone address')   // ← address
-      .populate('assignedVet', 'name phone address')         // ← address
-      .populate('assignedShelter', 'name phone address')     // ← address
+      .populate('assignedVolunteer', 'name phone address')
+      .populate('assignedVet', 'name phone address')
+      .populate('assignedShelter', 'name phone address')
       .populate('statusHistory.updatedBy', 'name role');
 
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
@@ -58,9 +80,9 @@ export const getAllCases = async (req, res) => {
     const filter = status ? { status } : {};
     const cases = await Case.find(filter)
       .populate('reportedBy', 'name email')
-      .populate('assignedVolunteer', 'name phone address')   // ← address
-      .populate('assignedVet', 'name phone address')         // ← address
-      .populate('assignedShelter', 'name phone address')     // ← address
+      .populate('assignedVolunteer', 'name phone address')
+      .populate('assignedVet', 'name phone address')
+      .populate('assignedShelter', 'name phone address')
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip((page - 1) * limit);
@@ -96,6 +118,8 @@ export const assignVolunteer = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Volunteer assigned to case ${caseData.caseId} by admin`);
+
     res.json({ message: 'Volunteer assigned', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -117,6 +141,8 @@ export const assignVet = async (req, res) => {
       message: `You have been assigned to treat animal in case ${caseData.caseId}.`,
       type: 'assignment',
     });
+
+    await notifyAdmin(caseData._id, `Vet assigned to case ${caseData.caseId} by admin`);
 
     res.json({ message: 'Vet assigned', case: caseData });
   } catch (err) {
@@ -140,6 +166,8 @@ export const assignShelter = async (req, res) => {
       type: 'assignment',
     });
 
+    await notifyAdmin(caseData._id, `Shelter assigned to case ${caseData.caseId} by admin`);
+
     res.json({ message: 'Shelter assigned', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -150,9 +178,9 @@ export const getCaseById = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id)
       .populate('reportedBy', 'name email phone')
-      .populate('assignedVolunteer', 'name email phone address')  // ← address
-      .populate('assignedVet', 'name email phone address')        // ← address
-      .populate('assignedShelter', 'name email phone address')    // ← address
+      .populate('assignedVolunteer', 'name email phone address')
+      .populate('assignedVet', 'name email phone address')
+      .populate('assignedShelter', 'name email phone address')
       .populate('statusHistory.updatedBy', 'name role');
     if (!caseData) return res.status(404).json({ message: 'Case not found' });
     res.json(caseData);
