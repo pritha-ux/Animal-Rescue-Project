@@ -1,6 +1,18 @@
 import Case from '../models/Case.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 
+// ── Helper: notify all admins ──
+const notifyAdmin = async (caseId, message) => {
+  try {
+    const admins = await User.find({ role: 'admin' }, '_id');
+    await Promise.all(admins.map(admin =>
+      Notification.create({ caseId, recipient: admin._id, message, type: 'status_update' })
+    ));
+  } catch (err) {
+    console.error('Failed to notify admin:', err.message);
+  }
+};
 
 export const getAssignedCases = async (req, res) => {
   try {
@@ -9,13 +21,11 @@ export const getAssignedCases = async (req, res) => {
       .populate('assignedVet', 'name')
       .populate('assignedShelter', 'name')
       .sort({ createdAt: -1 });
-      cases.forEach(c => console.log(c.caseId, 'vetLocation:', c.vetLocation));
     res.json(cases);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 export const acceptCase = async (req, res) => {
   try {
@@ -39,6 +49,8 @@ export const acceptCase = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Volunteer accepted case ${caseData.caseId}`);
+
     res.json({ message: 'Case accepted', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -61,6 +73,8 @@ export const declineCase = async (req, res) => {
       note: reason || 'Volunteer declined the case',
     });
     await caseData.save();
+
+    await notifyAdmin(caseData._id, `Volunteer declined case ${caseData.caseId}`);
 
     res.json({ message: 'Case declined', case: caseData });
   } catch (err) {
@@ -90,6 +104,8 @@ export const updateToInTransit = async (req, res) => {
       type: 'status_update',
     });
 
+    await notifyAdmin(caseData._id, `Case ${caseData.caseId} is now in transit to vet`);
+
     res.json({ message: 'Status updated to in transit', case: caseData });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -110,6 +126,9 @@ export const assignVetByVolunteer = async (req, res) => {
       message: `You have been assigned as vet for case ${caseData.caseId}`,
       type: 'assignment'
     });
+
+    await notifyAdmin(caseData._id, `Volunteer assigned vet to case ${caseData.caseId}`);
+
     res.json(caseData);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -130,24 +149,28 @@ export const assignShelterByVolunteer = async (req, res) => {
       message: `A case ${caseData.caseId} has been assigned to your shelter`,
       type: 'assignment'
     });
+
+    await notifyAdmin(caseData._id, `Volunteer assigned shelter to case ${caseData.caseId}`);
+
     res.json(caseData);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 export const markInTransitToShelter = async (req, res) => {
   try {
     const caseItem = await Case.findById(req.params.id);
 
     caseItem.status = 'in_transit_to_shelter';
-
     caseItem.statusHistory.push({
       status: 'in_transit_to_shelter',
       note: 'Moving animal to shelter',
       updatedBy: req.user._id,
     });
-
     await caseItem.save();
+
+    await notifyAdmin(caseItem._id, `Case ${caseItem.caseId} is now in transit to shelter`);
 
     res.json(caseItem);
   } catch (err) {
