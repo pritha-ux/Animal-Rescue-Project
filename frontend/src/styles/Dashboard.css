@@ -133,7 +133,10 @@
   color: #374151;
   vertical-align: middle;
 }
-
+.data-table td:last-child {
+  white-space: nowrap;
+}
+ 
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tbody tr { transition: background 0.15s; }
 .data-table tbody tr:hover td { background: #fff7ed; }
@@ -146,6 +149,9 @@
   border-radius: 6px;
   font-size: 0.82rem;
   border: 1px solid #fed7aa;
+}
+.case-id {
+  white-space: nowrap;
 }
 
 /* Tabs */
@@ -850,4 +856,19 @@
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
+}
+.actions-cell {
+  display: flex;
+  align-items: center;
+   
+  gap: 12px;
+  min-width: 220px;
+}
+
+.data-table td:last-child,
+.data-table th:last-child {
+  text-align: left;  
+}
+.data-table th:last-child {
+  text-align: center;
 }

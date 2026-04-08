@@ -52,7 +52,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [msg, setMsg] = useState('');
-  const [historyModal, setHistoryModal] = useState(null); // ← INSIDE component
+  const [historyModal, setHistoryModal] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -92,72 +92,71 @@ export default function AdminDashboard() {
     }
   };
 
-  const generatePDF = async () => {
-  const { default: jsPDF } = await import('jspdf');
-  const { default: autoTable } = await import('jspdf-autotable');
+  const generatePDF = async (c) => {
+    const { default: jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
 
-  const doc = new jsPDF();
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(234, 88, 12);
+    doc.text('Animal Rescue Case Report', 14, 20);
 
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(234, 88, 12);
-  doc.text('Animal Rescue System', 14, 18);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
 
-  doc.setFontSize(11);
-  doc.setTextColor(100);
-  doc.text('Case Report', 14, 26);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+    doc.setDrawColor(234, 88, 12);
+    doc.line(14, 32, 196, 32);
 
-  doc.setDrawColor(234, 88, 12);
-  doc.setLineWidth(0.5);
-  doc.line(14, 36, 196, 36);
+    // Case details
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text(`Case ID: ${c.caseId}`, 14, 44);
 
-  doc.setFontSize(10);
-  doc.setTextColor(30);
-  doc.text(`Total Cases: ${stats.totalCases}`, 14, 44);
-  doc.text(`Volunteers: ${stats.staff.totalVolunteers}`, 70, 44);
-  doc.text(`Veterinarians: ${stats.staff.totalVets}`, 110, 44);
-  doc.text(`Shelter Staff: ${stats.staff.totalShelterStaff}`, 155, 44);
+    doc.setFontSize(11);
+    doc.text(`Animal Name: ${c.animalName || 'Unknown'}`, 14, 56);
+    doc.text(`Animal Type: ${c.animalType || 'Unknown'}`, 14, 64);
+    doc.text(`Status: ${c.status.replace(/_/g, ' ')}`, 14, 72);
 
-  autoTable(doc, {
-    startY: 52,
-    head: [['Case ID', 'Animal', 'Status', 'Volunteer', 'Location', 'Reported At']],
-    body: cases.map(c => [
-      c.caseId,
-      `${c.animalName || 'Unknown'} (${c.animalType})`,
-      c.status.replace(/_/g, ' '),
-      c.assignedVolunteer?.name || 'Not assigned',
-      (c.location?.address || '').split(',')[0],
-      new Date(c.createdAt).toLocaleDateString(),
-    ]),
-    headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-    alternateRowStyles: { fillColor: [255, 247, 237] },
-    styles: { fontSize: 8, cellPadding: 3 },
-    columnStyles: {
-      0: { cellWidth: 24 },
-      1: { cellWidth: 36 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 40 },
-      5: { cellWidth: 24 },
-    },
-  });
+    doc.text(`Volunteer: ${c.assignedVolunteer?.name || 'Not assigned'}`, 14, 82);
+    doc.text(`Veterinarian: ${c.assignedVet?.name || 'Not assigned'}`, 14, 90);
+    doc.text(`Shelter Staff: ${c.assignedShelter?.name || 'Not assigned'}`, 14, 98);
+    doc.text(`Location: ${c.location?.address || 'No location available'}`, 14, 108);
+    doc.text(`Reported At: ${formatDateTime(c.createdAt)}`, 14, 116);
 
-  // Footer
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
+    // History section
+    doc.setFontSize(13);
+    doc.setTextColor(234, 88, 12);
+    doc.text('Case History', 14, 132);
+
+    let y = 144;
+    if (c.statusHistory?.length > 0) {
+      c.statusHistory.forEach((h) => {
+        doc.setFontSize(10);
+        doc.setTextColor(0);
+        doc.text(`• ${h.status.replace(/_/g, ' ')} - ${formatDateTime(h.timestamp)}`, 18, y);
+
+        if (h.note) {
+          y += 8;
+          doc.setFontSize(9);
+          doc.setTextColor(100);
+          doc.text(`Note: ${h.note}`, 24, y);
+        }
+        y += 12;
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(120);
+      doc.text('No history available', 18, y);
+    }
+
+    // Footer
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text(
-      `Animal Rescue System — Page ${i} of ${pageCount}`,
-      14,
-      doc.internal.pageSize.height - 10
-    );
-  }
+    doc.text('Animal Rescue System', 14, 287);
 
-  doc.save(`rescue-report-${new Date().toISOString().slice(0, 10)}.pdf`);
-};
+    doc.save(`${c.caseId}.pdf`);
+  };
 
   const donutData = stats ? Object.entries(stats.statusBreakdown)
     .filter(([, v]) => v > 0)
@@ -180,12 +179,12 @@ export default function AdminDashboard() {
   })();
 
   const statCards = stats ? [
-    { label: 'Total Cases', value: stats.totalCases,                cls: 'blue'   },
-    { label: 'Reported',    value: stats.statusBreakdown.reported,  cls: 'yellow' },
-    { label: 'In Transit',  value: stats.statusBreakdown.inTransit, cls: 'purple' },
-    { label: 'At Vet',      value: stats.statusBreakdown.atVet,     cls: 'orange' },
-    { label: 'At Shelter',  value: stats.statusBreakdown.atShelter, cls: 'teal'   },
-    { label: 'Adopted',     value: stats.statusBreakdown.adopted,   cls: 'green'  },
+    { label: 'Total Cases', value: stats.totalCases, cls: 'blue' },
+    { label: 'Reported', value: stats.statusBreakdown.reported, cls: 'yellow' },
+    { label: 'In Transit', value: stats.statusBreakdown.inTransit, cls: 'purple' },
+    { label: 'At Vet', value: stats.statusBreakdown.atVet, cls: 'orange' },
+    { label: 'At Shelter', value: stats.statusBreakdown.atShelter, cls: 'teal' },
+    { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
   ] : [];
 
   const noReassignStatuses = [
@@ -194,7 +193,7 @@ export default function AdminDashboard() {
     'at_shelter', 'adopted', 'returned_to_owner', 'closed',
   ];
   const completedStatuses = ['adopted', 'returned_to_owner'];
-  const closedStatus      = ['closed'];
+  const closedStatus = ['closed'];
 
   if (loading) return <div className="loading">Loading dashboard...</div>;
 
@@ -203,7 +202,7 @@ export default function AdminDashboard() {
       <Navbar />
       <div className="dashboard-container">
 
-        {/* Header with Generate Report button */}
+        {/* Header */}
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Admin Dashboard</h1>
@@ -211,9 +210,6 @@ export default function AdminDashboard() {
               System overview and case management.
             </p>
           </div>
-          <button className="btn btn-orange" onClick={generatePDF}>
-            📄 Generate Report
-          </button>
         </div>
 
         {msg && (
@@ -258,7 +254,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Charts Row */}
+            {/* Charts */}
             <div className="charts-row">
               <div className="chart-card">
                 <p className="chart-title">Cases by Status</p>
@@ -391,27 +387,15 @@ export default function AdminDashboard() {
                       <td>{c.assignedVolunteer?.name || <span style={{ color: '#d1d5db' }}>Not assigned</span>}</td>
                       <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{formatDateTime(c.createdAt)}</td>
                       <td>
-                        {/* History — always visible */}
-                        <button className="action-link blue"
-                          onClick={() => setHistoryModal(c)}>
-                          History
-                        </button>
-
+                        <button className="action-link blue" onClick={() => setHistoryModal(c)}>History</button>
+                        <button className="action-link" style={{ marginLeft: 8, color: '#ea580c' }} onClick={() => generatePDF(c)}>PDF</button>
                         {!noReassignStatuses.includes(c.status) && (
                           <button className="action-link blue" style={{ marginLeft: 8 }}
-                            onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>
-                            Assign
-                          </button>
+                            onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>Assign</button>
                         )}
                         {![...completedStatuses, ...closedStatus].includes(c.status) && (
                           <button className="action-link red" style={{ marginLeft: 8 }}
-                            onClick={async () => {
-                              await closeCase(c._id, { note: 'Closed by admin' });
-                              setMsg('Case closed!');
-                              await refreshCases();
-                            }}>
-                            Close
-                          </button>
+                            onClick={async () => { await closeCase(c._id, { note: 'Closed by admin' }); setMsg('Case closed!'); await refreshCases(); }}>Close</button>
                         )}
                         {completedStatuses.includes(c.status) && (
                           <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>✅ Completed</span>
@@ -427,106 +411,6 @@ export default function AdminDashboard() {
             </div>
           </>
         )}
-
-        {/* STAFF TAB */}
-        {tab === 'staff' && (
-          <div className="staff-grid">
-            {[
-              { title: 'Volunteers',    list: volunteers },
-              { title: 'Veterinarians', list: vets       },
-              { title: 'Shelter Staff', list: shelters   },
-            ].map(({ title, list }) => (
-              <div key={title} className="staff-card">
-                <p className="staff-card-title">
-                  {title} <span style={{ color: '#ea580c' }}>({list.length})</span>
-                </p>
-                {list.length === 0
-                  ? <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>None registered yet</p>
-                  : list.map(u => (
-                    <div key={u._id} className="staff-member">
-                      <div className="staff-avatar">{u.name[0].toUpperCase()}</div>
-                      <div className="staff-info">
-                        <p>{u.name}</p>
-                        <span>{u.email}</span>
-                        {u.phone && <span> · {u.phone}</span>}
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ASSIGN VOLUNTEER MODAL */}
-        {selectedCase && (
-          <div className="modal-overlay" onClick={() => setSelectedCase(null)}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3 className="modal-title">Assign Volunteer</h3>
-              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 16 }}>
-                Case: <strong>{selectedCase.caseId}</strong> — {selectedCase.animalType} at {selectedCase.location?.address}
-              </p>
-              <div className="modal-form">
-                <p className="modal-section-label">Select Volunteer</p>
-                <select value={selectedVol} onChange={e => setSelectedVol(e.target.value)}
-                  style={{ border: '1.5px solid #fed7aa', borderRadius: 10, padding: '10px 14px', fontSize: '0.9rem', width: '100%' }}>
-                  <option value="">Choose a volunteer...</option>
-                  {volunteers.map(v => (
-                    <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="modal-actions">
-                <button className="btn btn-orange" onClick={doAssignVolunteer} disabled={assigning}>
-                  {assigning ? 'Assigning...' : 'Assign Volunteer'}
-                </button>
-                <button className="btn btn-gray" onClick={() => setSelectedCase(null)}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* HISTORY MODAL */}
-        {historyModal && (
-          <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
-            <div className="modal history-modal" onClick={e => e.stopPropagation()}>
-              <div className="history-modal-header">
-                <div>
-                  <h3 className="modal-title">Case Timeline</h3>
-                  <p className="modal-subtitle">
-                    <span className="case-id">{historyModal.caseId}</span> — {historyModal.animalName || 'Unknown'} ({historyModal.animalType})
-                  </p>
-                </div>
-                <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
-              </div>
-              <div className="timeline-wrapper">
-                {historyModal.statusHistory?.length > 0 ? (
-                  historyModal.statusHistory.map((h, i) => (
-                    <div key={i} className="timeline-row">
-                      <div className="timeline-left">
-                        <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
-                        {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
-                      </div>
-                      <div className="timeline-body">
-                        <div className="timeline-top">
-                          <StatusBadge status={h.status} />
-                          <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
-                        </div>
-                        {h.note && <p className="timeline-note">{h.note}</p>}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '40px 0' }}>No history yet</p>
-                )}
-              </div>
-              <div className="modal-actions">
-                <button className="btn btn-gray" onClick={() => setHistoryModal(null)}>Close</button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );

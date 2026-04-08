@@ -26,11 +26,28 @@ export default function Navbar() {
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
 
+  const fetchNotifications = () => {
+    getNotifications().then(res => setNotifications(res.data)).catch(() => {});
+  };
+
   useEffect(() => {
     if (user) {
-      getNotifications().then(res => setNotifications(res.data)).catch(() => {});
+      fetchNotifications();
+
+      // ── Poll every 30 seconds ──
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
     }
   }, [user]);
+
+  // ── Close dropdown on outside click ──
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (!e.target.closest('.notif-wrapper')) setShowNotif(false);
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   const unread = notifications.filter(n => !n.isRead).length;
 
@@ -46,13 +63,15 @@ export default function Navbar() {
       </Link>
 
       <div className="navbar-right">
-        {/* Show Report button for everyone except admin */}
         {user?.role !== 'admin' && (
           <Link to="/report" className="navbar-report-btn">+ Report Animal</Link>
         )}
 
         <div className="notif-wrapper">
-          <button className="notif-btn" onClick={() => setShowNotif(!showNotif)}>
+          <button className="notif-btn" onClick={() => {
+            setShowNotif(!showNotif);
+            if (!showNotif) fetchNotifications(); // ← refresh when opening
+          }}>
             🔔
             {unread > 0 && <span className="notif-badge">{unread}</span>}
           </button>
@@ -61,7 +80,9 @@ export default function Navbar() {
             <div className="notif-dropdown">
               <div className="notif-header">
                 <span>Notifications</span>
-                <button className="notif-mark-all" onClick={handleMarkAll}>Mark all read</button>
+                {unread > 0 && (
+                  <button className="notif-mark-all" onClick={handleMarkAll}>Mark all read</button>
+                )}
               </div>
               <div className="notif-list">
                 {notifications.length === 0 ? (
