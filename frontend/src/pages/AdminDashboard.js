@@ -96,7 +96,6 @@ export default function AdminDashboard() {
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
 
-    // Header
     doc.setFontSize(20);
     doc.setTextColor(234, 88, 12);
     doc.text('Animal Rescue Case Report', 14, 20);
@@ -108,7 +107,6 @@ export default function AdminDashboard() {
     doc.setDrawColor(234, 88, 12);
     doc.line(14, 32, 196, 32);
 
-    // Case details
     doc.setFontSize(14);
     doc.setTextColor(0);
     doc.text(`Case ID: ${c.caseId}`, 14, 44);
@@ -117,14 +115,12 @@ export default function AdminDashboard() {
     doc.text(`Animal Name: ${c.animalName || 'Unknown'}`, 14, 56);
     doc.text(`Animal Type: ${c.animalType || 'Unknown'}`, 14, 64);
     doc.text(`Status: ${c.status.replace(/_/g, ' ')}`, 14, 72);
-
     doc.text(`Volunteer: ${c.assignedVolunteer?.name || 'Not assigned'}`, 14, 82);
     doc.text(`Veterinarian: ${c.assignedVet?.name || 'Not assigned'}`, 14, 90);
     doc.text(`Shelter Staff: ${c.assignedShelter?.name || 'Not assigned'}`, 14, 98);
     doc.text(`Location: ${c.location?.address || 'No location available'}`, 14, 108);
     doc.text(`Reported At: ${formatDateTime(c.createdAt)}`, 14, 116);
 
-    // History section
     doc.setFontSize(13);
     doc.setTextColor(234, 88, 12);
     doc.text('Case History', 14, 132);
@@ -135,7 +131,6 @@ export default function AdminDashboard() {
         doc.setFontSize(10);
         doc.setTextColor(0);
         doc.text(`• ${h.status.replace(/_/g, ' ')} - ${formatDateTime(h.timestamp)}`, 18, y);
-
         if (h.note) {
           y += 8;
           doc.setFontSize(9);
@@ -150,11 +145,9 @@ export default function AdminDashboard() {
       doc.text('No history available', 18, y);
     }
 
-    // Footer
     doc.setFontSize(8);
     doc.setTextColor(150);
     doc.text('Animal Rescue System', 14, 287);
-
     doc.save(`${c.caseId}.pdf`);
   };
 
@@ -173,9 +166,7 @@ export default function AdminDashboard() {
       const day = formatDateShort(c.createdAt);
       counts[day] = (counts[day] || 0) + 1;
     });
-    return Object.entries(counts)
-      .slice(-10)
-      .map(([date, count]) => ({ date, count }));
+    return Object.entries(counts).slice(-10).map(([date, count]) => ({ date, count }));
   })();
 
   const statCards = stats ? [
@@ -202,7 +193,6 @@ export default function AdminDashboard() {
       <Navbar />
       <div className="dashboard-container">
 
-        {/* Header */}
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Admin Dashboard</h1>
@@ -254,33 +244,19 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Charts */}
             <div className="charts-row">
               <div className="chart-card">
                 <p className="chart-title">Cases by Status</p>
                 {donutData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
-                      <Pie
-                        data={donutData}
-                        cx="50%" cy="50%"
-                        innerRadius={60} outerRadius={95}
-                        paddingAngle={3} dataKey="value"
-                      >
-                        {donutData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
+                      <Pie data={donutData} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value">
+                        {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip
-                        formatter={(value, name) => [value, name]}
-                        contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }}
-                      />
-                      <Legend
-                        iconType="circle" iconSize={8}
-                        formatter={(value) => (
-                          <span style={{ fontSize: '0.75rem', color: '#374151', textTransform: 'capitalize' }}>{value}</span>
-                        )}
-                      />
+                      <Tooltip formatter={(value, name) => [value, name]} contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }} />
+                      <Legend iconType="circle" iconSize={8} formatter={(value) => (
+                        <span style={{ fontSize: '0.75rem', color: '#374151', textTransform: 'capitalize' }}>{value}</span>
+                      )} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -296,15 +272,8 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                       <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                       <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
-                      <Tooltip
-                        contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }}
-                        formatter={(v) => [v, 'Cases']}
-                      />
-                      <Line
-                        type="monotone" dataKey="count"
-                        stroke="#ea580c" strokeWidth={2.5}
-                        dot={{ fill: '#ea580c', r: 4 }} activeDot={{ r: 6 }}
-                      />
+                      <Tooltip contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }} formatter={(v) => [v, 'Cases']} />
+                      <Line type="monotone" dataKey="count" stroke="#ea580c" strokeWidth={2.5} dot={{ fill: '#ea580c', r: 4 }} activeDot={{ r: 6 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -313,18 +282,13 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Recent Cases Table */}
             <h3 className="card-title" style={{ marginTop: 24 }}>Recent Cases</h3>
             <div className="table-wrapper">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Case ID</th>
-                    <th>Animal</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Reported By</th>
-                    <th>Date & Time</th>
+                    <th>Case ID</th><th>Animal</th><th>Location</th>
+                    <th>Status</th><th>Reported By</th><th>Date & Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -368,13 +332,8 @@ export default function AdminDashboard() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Case ID</th>
-                    <th>Animal</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Volunteer</th>
-                    <th>Reported At</th>
-                    <th>Actions</th>
+                    <th>Case ID</th><th>Animal</th><th>Location</th>
+                    <th>Status</th><th>Volunteer</th><th>Reported At</th><th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -411,6 +370,77 @@ export default function AdminDashboard() {
             </div>
           </>
         )}
+
+        {/* Assign Volunteer Modal */}
+        {selectedCase && (
+          <div className="modal-overlay" onClick={() => setSelectedCase(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <h3 className="modal-title">Assign Volunteer</h3>
+              <p className="modal-subtitle">Case: <strong>{selectedCase.caseId}</strong> — {selectedCase.animalType}</p>
+              <div className="modal-form">
+                <p className="modal-section-label">Select Volunteer</p>
+                <div className="modal-assign-row">
+                  <select value={selectedVol} onChange={e => setSelectedVol(e.target.value)}>
+                    <option value="">Choose a volunteer...</option>
+                    {volunteers.map(v => (
+                      <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>
+                    ))}
+                  </select>
+                  <button className="btn btn-orange" onClick={doAssignVolunteer} disabled={assigning}>
+                    {assigning ? 'Assigning...' : 'Assign'}
+                  </button>
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-gray" onClick={() => setSelectedCase(null)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── History Modal  */}
+        {historyModal && (
+          <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
+            <div className="modal history-modal" onClick={e => e.stopPropagation()}>
+              <div className="history-modal-header">
+                <div>
+                  <h3 className="modal-title">Case Timeline</h3>
+                  <p className="modal-subtitle">
+                    <span className="case-id">{historyModal.caseId}</span> — {historyModal.animalName || 'Unknown'} ({historyModal.animalType})
+                  </p>
+                </div>
+                <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
+              </div>
+              <div className="timeline-wrapper">
+                {historyModal.statusHistory?.length > 0 ? (
+                  historyModal.statusHistory.map((h, i) => (
+                    <div key={i} className="timeline-row">
+                      <div className="timeline-left">
+                        <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
+                        {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
+                      </div>
+                      <div className="timeline-body">
+                        <div className="timeline-top">
+                          <StatusBadge status={h.status} />
+                          <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
+                        </div>
+                        {h.note && <p className="timeline-note">{h.note}</p>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>
+                    No history available.
+                  </p>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-gray" onClick={() => setHistoryModal(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
