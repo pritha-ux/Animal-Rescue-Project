@@ -7,7 +7,13 @@ import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
 const CASES_PER_PAGE = 2;
-const IMAGE_BASE = 'http://localhost:5000';
+
+const getImageUrl = (img) => {
+  if (!img) return '';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('uploads/')) return `http://localhost:5000/${img}`;
+  return `http://localhost:5000/uploads/${img}`;
+};
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -35,8 +41,8 @@ const CaseImages = ({ images }) => {
   return (
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '8px 0 4px', paddingBottom: 4 }}>
       {images.map((img, i) => (
-        <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
-          onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+        <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+          onClick={() => window.open(getImageUrl(img), '_blank')}
           style={{ height: 80, width: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
       ))}
     </div>
@@ -106,7 +112,7 @@ export default function VetDashboard() {
   const handleVetAccept = async (caseId) => {
     try {
       await acceptVetCase(caseId);
-      setMsg('Case accepted! Now pin your clinic location so the volunteer knows where to bring the animal.');
+      setMsg('Case accepted! Now pin your clinic location.');
       load();
     } catch (err) {
       setMsg(err.response?.data?.message || 'Failed to accept case.');
@@ -116,7 +122,7 @@ export default function VetDashboard() {
   const handleUpdateLocation = async (location) => {
     try {
       await updateVetLocation(locationUpdateModal._id, { location });
-      setMsg('Clinic location pinned! The volunteer can now see your location.');
+      setMsg('Clinic location pinned!');
       setLocationUpdateModal(null);
       load();
     } catch (err) {
@@ -160,7 +166,7 @@ export default function VetDashboard() {
         {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
           <>
             <button className="btn btn-green" onClick={() => handleVetAccept(c._id)}>Accept Case</button>
-            <button className="btn btn-red" onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined — volunteer notified')}>Decline</button>
+            <button className="btn btn-red" onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined')}>Decline</button>
           </>
         )}
         {['vet_accepted', 'at_vet'].includes(c.status) && (
@@ -169,13 +175,13 @@ export default function VetDashboard() {
           </button>
         )}
         {c.status === 'vet_accepted' && (
-          <button className="btn btn-orange" onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>Mark Animal Arrived</button>
+          <button className="btn btn-orange" onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived!')}>Mark Animal Arrived</button>
         )}
         {['vet_accepted', 'at_vet'].includes(c.status) && (
           <button className="btn btn-blue" onClick={() => { setMedModal(c._id); setMedFiles([]); }}>Add Medical Record</button>
         )}
         {c.status === 'at_vet' && (
-          <button className="btn btn-green" onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>Treatment Complete</button>
+          <button className="btn btn-green" onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment complete!')}>Treatment Complete</button>
         )}
       </div>
 
@@ -200,10 +206,8 @@ export default function VetDashboard() {
               {m.medications && <p>Medications: {m.medications}</p>}
               {m.notes && <p>{m.notes}</p>}
               {m.documents?.length > 0 && m.documents.map((doc, j) => (
-                <a key={j} href={`${IMAGE_BASE}/uploads/${doc}`} target="_blank" rel="noreferrer"
-                  style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>
-                  📄 Document {j + 1}
-                </a>
+                <a key={j} href={getImageUrl(doc)} target="_blank" rel="noreferrer"
+                  style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>📄 Document {j + 1}</a>
               ))}
               <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>{formatDateTime(m.createdAt)}</p>
             </div>
@@ -245,9 +249,15 @@ export default function VetDashboard() {
             {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
-        {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
-        )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {c.statusHistory?.length > 0 && (
+            <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
+          )}
+          <button className="history-chip" style={{ background: '#eff6ff', color: '#3b82f6', borderColor: '#bfdbfe' }}
+            onClick={() => window.open(`/track/${c.caseId}`, '_blank')}>
+            🔍 Track
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -318,7 +328,7 @@ export default function VetDashboard() {
                 <p className="section-subtitle">{sortedCases.length} cases · Page {assignedPage} of {assignedTotalPages || 1}</p>
               </div>
             </div>
-            {loading ? <div className="loading">Loading cases...</div> : sortedCases.length === 0 ? (
+            {loading ? <div className="loading">Loading...</div> : sortedCases.length === 0 ? (
               <div className="empty-state"><div className="empty-icon">🩺</div><h3>No assigned cases</h3></div>
             ) : (
               <>
@@ -412,8 +422,8 @@ export default function VetDashboard() {
               {historyModal.images?.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 8 }}>
                   {historyModal.images.map((img, i) => (
-                    <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
-                      onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+                    <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+                      onClick={() => window.open(getImageUrl(img), '_blank')}
                       style={{ height: 70, width: 70, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
                   ))}
                 </div>
