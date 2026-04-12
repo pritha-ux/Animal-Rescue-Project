@@ -9,7 +9,7 @@ import {
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
-const IMAGE_BASE = 'http://localhost:5000';
+const IMAGE_BASE = 'http://localhost:5000/uploads';;
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';

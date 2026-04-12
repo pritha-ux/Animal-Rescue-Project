@@ -6,7 +6,13 @@ import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
 const CASES_PER_PAGE = 2;
-const IMAGE_BASE = 'http://localhost:5000';
+
+const getImageUrl = (img) => {
+  if (!img) return '';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('uploads/')) return `http://localhost:5000/${img}`;
+  return `http://localhost:5000/uploads/${img}`;
+};
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -40,13 +46,9 @@ const CaseImages = ({ images }) => {
   return (
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '8px 0 4px', paddingBottom: 4 }}>
       {images.map((img, i) => (
-        <img
-          key={i}
-          src={`${IMAGE_BASE}/${img}`}
-          alt={`animal-${i}`}
-          onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
-          style={{ height: 80, width: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }}
-        />
+        <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+          onClick={() => window.open(getImageUrl(img), '_blank')}
+          style={{ height: 80, width: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
       ))}
     </div>
   );
@@ -155,40 +157,27 @@ export default function VolunteerDashboard() {
       <p className="case-card-desc">{c.description}</p>
       <CaseImages images={c.images} />
       <p className="case-card-meta">📍 {c.location?.address}</p>
-      {c.reportedBy && (
-        <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
-      )}
+      {c.reportedBy && <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>}
       <div className="case-assign-info">
-        <p className="case-card-meta">
-          🩺 Vet: {c.assignedVet ? <strong>{c.assignedVet.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
-        </p>
-        <p className="case-card-meta">
-          🏠 Shelter: {c.assignedShelter ? <strong>{c.assignedShelter.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}
-        </p>
+        <p className="case-card-meta">🩺 Vet: {c.assignedVet ? <strong>{c.assignedVet.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}</p>
+        <p className="case-card-meta">🏠 Shelter: {c.assignedShelter ? <strong>{c.assignedShelter.name}</strong> : <span style={{ color: '#ea580c' }}>Not assigned</span>}</p>
       </div>
-
       {c.vetLocation?.lat && (
         <div style={{ marginTop: 10, background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
           <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>📍 Vet Clinic Location</p>
           <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>{c.vetLocation.address}</p>
           <a href={`https://www.openstreetmap.org/?mlat=${c.vetLocation.lat}&mlon=${c.vetLocation.lng}#map=17/${c.vetLocation.lat}/${c.vetLocation.lng}`}
-            target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>
-            🗺 View on Map
-          </a>
+            target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>🗺 View on Map</a>
         </div>
       )}
-
       {c.shelterLocation?.lat && (
         <div style={{ marginTop: 10, background: '#f0fdfa', borderRadius: 10, padding: '10px 14px', border: '1px solid #99f6e4' }}>
           <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', marginBottom: 4 }}>📍 Shelter Location</p>
           <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>{c.shelterLocation.address}</p>
           <a href={`https://www.openstreetmap.org/?mlat=${c.shelterLocation.lat}&mlon=${c.shelterLocation.lng}#map=17/${c.shelterLocation.lat}/${c.shelterLocation.lng}`}
-            target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: '#0d9488', fontWeight: 700 }}>
-            🗺 View on Map
-          </a>
+            target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: '#0d9488', fontWeight: 700 }}>🗺 View on Map</a>
         </div>
       )}
-
       <div className="case-summary-row">
         <div className="case-latest-status">
           <span className="summary-label">Latest:</span>
@@ -200,7 +189,6 @@ export default function VolunteerDashboard() {
           <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
         )}
       </div>
-
       {view === 'assigned' && (
         <div className="case-card-actions">
           {c.status === 'assigned' && (
@@ -216,14 +204,10 @@ export default function VolunteerDashboard() {
             <span style={{ color: '#7c3aed', fontWeight: 600, fontSize: '0.88rem' }}>Currently in transit...</span>
           )}
           {['volunteer_accepted', 'vet_accepted', 'in_transit', 'at_vet', 'vet_declined', 'treatment_done', 'shelter_declined'].includes(c.status) && (
-            <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>
-              Assign Vet & Shelter
-            </button>
+            <button className="btn btn-orange" onClick={() => { setModal(c); setSelectedVet(''); setSelectedShelter(''); }}>Assign Vet & Shelter</button>
           )}
           {c.status === 'shelter_accepted' && c.shelterLocation?.lat && (
-            <button className="btn btn-orange" onClick={() => handle(() => markInTransitToShelter(c._id), 'Moving to shelter')}>
-              🚚 Moving to Shelter
-            </button>
+            <button className="btn btn-orange" onClick={() => handle(() => markInTransitToShelter(c._id), 'Moving to shelter')}>🚚 Moving to Shelter</button>
           )}
           {c.status === 'in_transit_to_shelter' && (
             <span style={{ color: '#ea580c', fontWeight: 600, fontSize: '0.88rem' }}>Moving to shelter...</span>
@@ -253,9 +237,15 @@ export default function VolunteerDashboard() {
             {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
-        {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
-        )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {c.statusHistory?.length > 0 && (
+            <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
+          )}
+          <button className="history-chip" style={{ background: '#eff6ff', color: '#3b82f6', borderColor: '#bfdbfe' }}
+            onClick={() => window.open(`/track/${c.caseId}`, '_blank')}>
+            🔍 Track
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -271,11 +261,7 @@ export default function VolunteerDashboard() {
           </div>
         </div>
 
-        {msg && (
-          <div className="alert-success">
-            {msg} <button className="alert-close" onClick={() => setMsg('')}>✕</button>
-          </div>
-        )}
+        {msg && <div className="alert-success">{msg} <button className="alert-close" onClick={() => setMsg('')}>✕</button></div>}
 
         {view === 'dashboard' && (
           <>
@@ -285,7 +271,6 @@ export default function VolunteerDashboard() {
               <div className="dash-stat-box orange"><span className="dash-stat-num">{cases.filter(c => c.status === 'in_transit').length}</span><span className="dash-stat-label">In Transit</span></div>
               <div className="dash-stat-box green"><span className="dash-stat-num">{myCases.length}</span><span className="dash-stat-label">I Reported</span></div>
             </div>
-
             <div className="quick-action-grid">
               <div className="quick-action-card" onClick={() => goToView('assigned')}>
                 <div className="quick-action-icon" style={{ background: '#eff6ff' }}>📋</div>
@@ -298,7 +283,6 @@ export default function VolunteerDashboard() {
                 <span className="quick-action-arrow">→</span>
               </div>
             </div>
-
             {cases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
@@ -308,7 +292,6 @@ export default function VolunteerDashboard() {
                 <div className="case-list">{cases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}</div>
               </>
             )}
-
             {myCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
@@ -318,7 +301,6 @@ export default function VolunteerDashboard() {
                 <div className="case-list">{myCases.slice(0, 2).map(c => <ReportedCard key={c._id} c={c} />)}</div>
               </>
             )}
-
             {cases.length === 0 && myCases.length === 0 && !loading && (
               <div className="empty-state"><div className="empty-icon">🙋</div><h3>No activity yet</h3><p>Cases assigned to you will appear here.</p></div>
             )}
@@ -435,8 +417,8 @@ export default function VolunteerDashboard() {
               {historyModal.images?.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 8 }}>
                   {historyModal.images.map((img, i) => (
-                    <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
-                      onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+                    <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+                      onClick={() => window.open(getImageUrl(img), '_blank')}
                       style={{ height: 70, width: 70, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
                   ))}
                 </div>
