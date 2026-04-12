@@ -7,6 +7,7 @@ import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
 const CASES_PER_PAGE = 2;
+const IMAGE_BASE = 'http://localhost:5000';
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -18,19 +19,26 @@ const formatDateTime = (dateStr) => {
 };
 
 const CardTimestamps = ({ createdAt, statusHistory }) => {
-  const latestTimestamp = statusHistory?.length > 0
-    ? statusHistory[statusHistory.length - 1].timestamp
-    : null;
+  const latestTimestamp = statusHistory?.length > 0 ? statusHistory[statusHistory.length - 1].timestamp : null;
   return (
     <div className="case-card-dates">
-      <span className="case-card-date">
-        <span className="date-label">Reported:</span> {formatDateTime(createdAt)}
-      </span>
+      <span className="case-card-date"><span className="date-label">Reported:</span> {formatDateTime(createdAt)}</span>
       {latestTimestamp && latestTimestamp !== createdAt && (
-        <span className="case-card-date">
-          <span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}
-        </span>
+        <span className="case-card-date"><span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}</span>
       )}
+    </div>
+  );
+};
+
+const CaseImages = ({ images }) => {
+  if (!images?.length) return null;
+  return (
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '8px 0 4px', paddingBottom: 4 }}>
+      {images.map((img, i) => (
+        <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
+          onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+          style={{ height: 80, width: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
+      ))}
     </div>
   );
 };
@@ -40,9 +48,7 @@ const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
   return (
     <div className="pagination-row">
       <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>← Prev</button>
-      <span className="pagination-info">
-        Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
-      </span>
+      <span className="pagination-info">Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong></span>
       <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>Next →</button>
     </div>
   );
@@ -55,7 +61,7 @@ export default function VetDashboard() {
   const [msg, setMsg] = useState('');
   const [medModal, setMedModal] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
-  const [locationUpdateModal, setLocationUpdateModal] = useState(null); // ← for pinning after accept
+  const [locationUpdateModal, setLocationUpdateModal] = useState(null);
   const [medData, setMedData] = useState({ diagnosis: '', treatment: '', medications: '', notes: '' });
   const [medFiles, setMedFiles] = useState([]);
   const [view, setView] = useState('dashboard');
@@ -76,7 +82,6 @@ export default function VetDashboard() {
 
   const assignedTotalPages = Math.ceil(sortedCases.length / CASES_PER_PAGE);
   const reportedTotalPages = Math.ceil(sortedMyCases.length / CASES_PER_PAGE);
-
   const pagedAssigned = sortedCases.slice((assignedPage - 1) * CASES_PER_PAGE, assignedPage * CASES_PER_PAGE);
   const pagedReported = sortedMyCases.slice((reportedPage - 1) * CASES_PER_PAGE, reportedPage * CASES_PER_PAGE);
 
@@ -90,11 +95,7 @@ export default function VetDashboard() {
     getMyCases().then(r => setMyCases(r.data)).catch(() => {});
   }, []);
 
-  const goToView = (v) => {
-    setView(v);
-    setAssignedPage(1);
-    setReportedPage(1);
-  };
+  const goToView = (v) => { setView(v); setAssignedPage(1); setReportedPage(1); };
 
   const handle = async (fn, successMsg) => {
     await fn();
@@ -102,7 +103,6 @@ export default function VetDashboard() {
     load();
   };
 
-  // ── Accept case (no location — just accepts) ──
   const handleVetAccept = async (caseId) => {
     try {
       await acceptVetCase(caseId);
@@ -113,7 +113,6 @@ export default function VetDashboard() {
     }
   };
 
-  // ── Pin/update location separately ──
   const handleUpdateLocation = async (location) => {
     try {
       await updateVetLocation(locationUpdateModal._id, { location });
@@ -140,7 +139,7 @@ export default function VetDashboard() {
   };
 
   const pendingCases = sortedCases.filter(c => ['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status));
-  const activeCases  = sortedCases.filter(c => ['vet_accepted', 'at_vet'].includes(c.status));
+  const activeCases = sortedCases.filter(c => ['vet_accepted', 'at_vet'].includes(c.status));
 
   const CaseCard = ({ c }) => (
     <div className="case-card">
@@ -151,70 +150,41 @@ export default function VetDashboard() {
         </div>
         <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
       </div>
-
       <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
       <p className="case-card-desc">{c.description}</p>
+      <CaseImages images={c.images} />
       <p className="case-card-meta">📍 {c.location?.address}</p>
-      {c.reportedBy && (
-        <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
-      )}
+      {c.reportedBy && <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>}
 
       <div className="case-card-actions">
-        {/* Step 1: Accept or Decline */}
         {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
           <>
-            <button className="btn btn-green" onClick={() => handleVetAccept(c._id)}>
-              Accept Case
-            </button>
-            <button className="btn btn-red"
-              onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined — volunteer notified')}>
-              Decline
-            </button>
+            <button className="btn btn-green" onClick={() => handleVetAccept(c._id)}>Accept Case</button>
+            <button className="btn btn-red" onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined — volunteer notified')}>Decline</button>
           </>
         )}
-
-        {/* Step 2: Pin location after accepting */}
         {['vet_accepted', 'at_vet'].includes(c.status) && (
           <button className="btn btn-green" onClick={() => setLocationUpdateModal(c)}>
             📍 {c.vetLocation?.lat ? 'Update Clinic Location' : 'Pin My Clinic Location'}
           </button>
         )}
-
         {c.status === 'vet_accepted' && (
-          <button className="btn btn-orange"
-            onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>
-            Mark Animal Arrived
-          </button>
+          <button className="btn btn-orange" onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived at clinic!')}>Mark Animal Arrived</button>
         )}
         {['vet_accepted', 'at_vet'].includes(c.status) && (
-          <button className="btn btn-blue"
-            onClick={() => { setMedModal(c._id); setMedFiles([]); }}>
-            Add Medical Record
-          </button>
+          <button className="btn btn-blue" onClick={() => { setMedModal(c._id); setMedFiles([]); }}>Add Medical Record</button>
         )}
         {c.status === 'at_vet' && (
-          <button className="btn btn-green"
-            onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>
-            Treatment Complete
-          </button>
+          <button className="btn btn-green" onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment marked complete!')}>Treatment Complete</button>
         )}
       </div>
 
-      {/* Pinned clinic location display */}
       {c.vetLocation?.lat && (
         <div style={{ marginTop: 10, background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', border: '1px solid #bbf7d0' }}>
-          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
-            📍 Your Pinned Clinic Location
-          </p>
-          <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
-            {c.vetLocation.address}
-          </p>
-          <a
-            href={`https://www.openstreetmap.org/?mlat=${c.vetLocation.lat}&mlon=${c.vetLocation.lng}#map=17/${c.vetLocation.lat}/${c.vetLocation.lng}`}
-            target="_blank" rel="noreferrer"
-            style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>
-            🗺 View on Map
-          </a>
+          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#15803d', marginBottom: 4 }}>📍 Your Pinned Clinic Location</p>
+          <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>{c.vetLocation.address}</p>
+          <a href={`https://www.openstreetmap.org/?mlat=${c.vetLocation.lat}&mlon=${c.vetLocation.lng}#map=17/${c.vetLocation.lat}/${c.vetLocation.lng}`}
+            target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700 }}>🗺 View on Map</a>
         </div>
       )}
 
@@ -230,7 +200,7 @@ export default function VetDashboard() {
               {m.medications && <p>Medications: {m.medications}</p>}
               {m.notes && <p>{m.notes}</p>}
               {m.documents?.length > 0 && m.documents.map((doc, j) => (
-                <a key={j} href={`http://localhost:5000/uploads/${doc}`} target="_blank" rel="noreferrer"
+                <a key={j} href={`${IMAGE_BASE}/uploads/${doc}`} target="_blank" rel="noreferrer"
                   style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>
                   📄 Document {j + 1}
                 </a>
@@ -245,15 +215,11 @@ export default function VetDashboard() {
         <div className="case-latest-status">
           <span className="summary-label">Latest:</span>
           <span className="summary-note">
-            {c.statusHistory?.length > 0
-              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-              : 'No updates yet'}
+            {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
         {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>
-            History ({c.statusHistory.length})
-          </button>
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
         )}
       </div>
     </div>
@@ -270,20 +236,17 @@ export default function VetDashboard() {
       </div>
       <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
       <p className="case-card-desc">{c.description}</p>
+      <CaseImages images={c.images} />
       <p className="case-card-meta">📍 {c.location?.address}</p>
       <div className="case-summary-row">
         <div className="case-latest-status">
           <span className="summary-label">Latest:</span>
           <span className="summary-note">
-            {c.statusHistory?.length > 0
-              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-              : 'No updates yet'}
+            {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
         {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>
-            History ({c.statusHistory.length})
-          </button>
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
         )}
       </div>
     </div>
@@ -293,103 +256,55 @@ export default function VetDashboard() {
     <div className="dashboard-page">
       <Navbar />
       <div className="dashboard-container">
-
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Veterinarian Dashboard</h1>
-            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>
-              Welcome back! Here's your overview.
-            </p>
+            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>Welcome back! Here's your overview.</p>
           </div>
         </div>
 
-        {msg && (
-          <div className="alert-success">
-            {msg}
-            <button className="alert-close" onClick={() => setMsg('')}>✕</button>
-          </div>
-        )}
+        {msg && <div className="alert-success">{msg}<button className="alert-close" onClick={() => setMsg('')}>✕</button></div>}
 
         {view === 'dashboard' && (
           <>
             <div className="dash-stats-row">
-              <div className="dash-stat-box blue">
-                <span className="dash-stat-num">{cases.length}</span>
-                <span className="dash-stat-label">Assigned Cases</span>
-              </div>
-              <div className="dash-stat-box orange">
-                <span className="dash-stat-num">{pendingCases.length}</span>
-                <span className="dash-stat-label">Pending Accept</span>
-              </div>
-              <div className="dash-stat-box teal">
-                <span className="dash-stat-num">{activeCases.length}</span>
-                <span className="dash-stat-label">Active / At Clinic</span>
-              </div>
-              <div className="dash-stat-box purple">
-                <span className="dash-stat-num">{myCases.length}</span>
-                <span className="dash-stat-label">I Reported</span>
-              </div>
+              <div className="dash-stat-box blue"><span className="dash-stat-num">{cases.length}</span><span className="dash-stat-label">Assigned Cases</span></div>
+              <div className="dash-stat-box orange"><span className="dash-stat-num">{pendingCases.length}</span><span className="dash-stat-label">Pending Accept</span></div>
+              <div className="dash-stat-box teal"><span className="dash-stat-num">{activeCases.length}</span><span className="dash-stat-label">Active / At Clinic</span></div>
+              <div className="dash-stat-box purple"><span className="dash-stat-num">{myCases.length}</span><span className="dash-stat-label">I Reported</span></div>
             </div>
-
             <div className="quick-action-grid">
               <div className="quick-action-card" onClick={() => goToView('assigned')}>
                 <div className="quick-action-icon" style={{ background: '#fff7ed' }}>🩺</div>
-                <div className="quick-action-info">
-                  <p className="quick-action-title">Assigned Cases</p>
-                  <p className="quick-action-sub">{cases.length} cases assigned to you</p>
-                </div>
+                <div className="quick-action-info"><p className="quick-action-title">Assigned Cases</p><p className="quick-action-sub">{cases.length} cases assigned to you</p></div>
                 <span className="quick-action-arrow">→</span>
               </div>
               <div className="quick-action-card" onClick={() => goToView('reported')}>
                 <div className="quick-action-icon" style={{ background: '#faf5ff' }}>🐾</div>
-                <div className="quick-action-info">
-                  <p className="quick-action-title">Cases I Reported</p>
-                  <p className="quick-action-sub">{myCases.length} cases you reported</p>
-                </div>
+                <div className="quick-action-info"><p className="quick-action-title">Cases I Reported</p><p className="quick-action-sub">{myCases.length} cases you reported</p></div>
                 <span className="quick-action-arrow">→</span>
               </div>
             </div>
-
             {sortedCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
-                  <div>
-                    <h2 className="section-title">Recent Assigned Cases</h2>
-                    <p className="section-subtitle">Showing latest 2 cases</p>
-                  </div>
-                  <button className="view-all-btn" onClick={() => goToView('assigned')}>
-                    View All ({sortedCases.length})
-                  </button>
+                  <div><h2 className="section-title">Recent Assigned Cases</h2><p className="section-subtitle">Showing latest 2 cases</p></div>
+                  <button className="view-all-btn" onClick={() => goToView('assigned')}>View All ({sortedCases.length})</button>
                 </div>
-                <div className="case-list">
-                  {sortedCases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}
-                </div>
+                <div className="case-list">{sortedCases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}</div>
               </>
             )}
-
             {sortedMyCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
-                  <div>
-                    <h2 className="section-title">Recently Reported by Me</h2>
-                    <p className="section-subtitle">Showing latest 2 cases</p>
-                  </div>
-                  <button className="view-all-btn" onClick={() => goToView('reported')}>
-                    View All ({sortedMyCases.length})
-                  </button>
+                  <div><h2 className="section-title">Recently Reported by Me</h2><p className="section-subtitle">Showing latest 2 cases</p></div>
+                  <button className="view-all-btn" onClick={() => goToView('reported')}>View All ({sortedMyCases.length})</button>
                 </div>
-                <div className="case-list">
-                  {sortedMyCases.slice(0, 2).map(c => <ReportedCard key={c._id} c={c} />)}
-                </div>
+                <div className="case-list">{sortedMyCases.slice(0, 2).map(c => <ReportedCard key={c._id} c={c} />)}</div>
               </>
             )}
-
             {cases.length === 0 && myCases.length === 0 && !loading && (
-              <div className="empty-state">
-                <div className="empty-icon">🩺</div>
-                <h3>No activity yet</h3>
-                <p>Cases assigned to you will appear here.</p>
-              </div>
+              <div className="empty-state"><div className="empty-icon">🩺</div><h3>No activity yet</h3><p>Cases assigned to you will appear here.</p></div>
             )}
           </>
         )}
@@ -400,30 +315,17 @@ export default function VetDashboard() {
               <div>
                 <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
                 <h2 className="section-title" style={{ marginTop: 8 }}>All Assigned Cases</h2>
-                <p className="section-subtitle">
-                  {sortedCases.length} cases · Page {assignedPage} of {assignedTotalPages || 1}
-                </p>
+                <p className="section-subtitle">{sortedCases.length} cases · Page {assignedPage} of {assignedTotalPages || 1}</p>
               </div>
             </div>
-            {loading ? (
-              <div className="loading">Loading cases...</div>
-            ) : sortedCases.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🩺</div>
-                <h3>No assigned cases</h3>
-                <p>Cases assigned to you will appear here.</p>
-              </div>
+            {loading ? <div className="loading">Loading cases...</div> : sortedCases.length === 0 ? (
+              <div className="empty-state"><div className="empty-icon">🩺</div><h3>No assigned cases</h3></div>
             ) : (
               <>
-                <div className="case-list">
-                  {pagedAssigned.map(c => <CaseCard key={c._id} c={c} />)}
-                </div>
-                <Pagination
-                  currentPage={assignedPage}
-                  totalPages={assignedTotalPages}
+                <div className="case-list">{pagedAssigned.map(c => <CaseCard key={c._id} c={c} />)}</div>
+                <Pagination currentPage={assignedPage} totalPages={assignedTotalPages}
                   onPrev={() => setAssignedPage(p => Math.max(1, p - 1))}
-                  onNext={() => setAssignedPage(p => Math.min(assignedTotalPages, p + 1))}
-                />
+                  onNext={() => setAssignedPage(p => Math.min(assignedTotalPages, p + 1))} />
               </>
             )}
           </>
@@ -435,30 +337,17 @@ export default function VetDashboard() {
               <div>
                 <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
                 <h2 className="section-title" style={{ marginTop: 8 }}>Cases I Reported</h2>
-                <p className="section-subtitle">
-                  {sortedMyCases.length} cases · Page {reportedPage} of {reportedTotalPages || 1}
-                </p>
+                <p className="section-subtitle">{sortedMyCases.length} cases · Page {reportedPage} of {reportedTotalPages || 1}</p>
               </div>
             </div>
-            {loading ? (
-              <div className="loading">Loading...</div>
-            ) : sortedMyCases.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🐾</div>
-                <h3>No reported cases</h3>
-                <p>Cases you report will appear here.</p>
-              </div>
+            {loading ? <div className="loading">Loading...</div> : sortedMyCases.length === 0 ? (
+              <div className="empty-state"><div className="empty-icon">🐾</div><h3>No reported cases</h3></div>
             ) : (
               <>
-                <div className="case-list">
-                  {pagedReported.map(c => <ReportedCard key={c._id} c={c} />)}
-                </div>
-                <Pagination
-                  currentPage={reportedPage}
-                  totalPages={reportedTotalPages}
+                <div className="case-list">{pagedReported.map(c => <ReportedCard key={c._id} c={c} />)}</div>
+                <Pagination currentPage={reportedPage} totalPages={reportedTotalPages}
                   onPrev={() => setReportedPage(p => Math.max(1, p - 1))}
-                  onNext={() => setReportedPage(p => Math.min(reportedTotalPages, p + 1))}
-                />
+                  onNext={() => setReportedPage(p => Math.min(reportedTotalPages, p + 1))} />
               </>
             )}
           </>
@@ -496,11 +385,7 @@ export default function VetDashboard() {
                   <input type="file" multiple accept="image/*,.pdf,.doc,.docx"
                     onChange={e => setMedFiles([...e.target.files])}
                     style={{ border: '1.5px dashed #fed7aa', borderRadius: 10, padding: '10px 14px', background: '#fff7ed', width: '100%', cursor: 'pointer' }} />
-                  {medFiles.length > 0 && (
-                    <p style={{ fontSize: '0.8rem', color: '#ea580c', marginTop: 6, fontWeight: 600 }}>
-                      {medFiles.length} file(s) selected
-                    </p>
-                  )}
+                  {medFiles.length > 0 && <p style={{ fontSize: '0.8rem', color: '#ea580c', marginTop: 6, fontWeight: 600 }}>{medFiles.length} file(s) selected</p>}
                 </div>
               </div>
               <div className="modal-actions">
@@ -524,6 +409,15 @@ export default function VetDashboard() {
                 </div>
                 <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
               </div>
+              {historyModal.images?.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 8 }}>
+                  {historyModal.images.map((img, i) => (
+                    <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
+                      onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+                      style={{ height: 70, width: 70, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
+                  ))}
+                </div>
+              )}
               <div className="timeline-wrapper">
                 {historyModal.statusHistory.map((h, i) => (
                   <div key={i} className="timeline-row">
@@ -548,7 +442,6 @@ export default function VetDashboard() {
           </div>
         )}
 
-        {/* ── Pin/Update Clinic Location Modal ── */}
         {locationUpdateModal && (
           <LocationPickerModal
             title={locationUpdateModal.vetLocation?.lat ? 'Update Clinic Location' : 'Pin Your Clinic Location'}
@@ -556,7 +449,6 @@ export default function VetDashboard() {
             onCancel={() => setLocationUpdateModal(null)}
           />
         )}
-
       </div>
     </div>
   );
