@@ -7,6 +7,7 @@ import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
 const CASES_PER_PAGE = 2;
+const IMAGE_BASE = 'http://localhost:5000';
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -18,19 +19,26 @@ const formatDateTime = (dateStr) => {
 };
 
 const CardTimestamps = ({ createdAt, statusHistory }) => {
-  const latestTimestamp = statusHistory?.length > 0
-    ? statusHistory[statusHistory.length - 1].timestamp
-    : null;
+  const latestTimestamp = statusHistory?.length > 0 ? statusHistory[statusHistory.length - 1].timestamp : null;
   return (
     <div className="case-card-dates">
-      <span className="case-card-date">
-        <span className="date-label">Reported:</span> {formatDateTime(createdAt)}
-      </span>
+      <span className="case-card-date"><span className="date-label">Reported:</span> {formatDateTime(createdAt)}</span>
       {latestTimestamp && latestTimestamp !== createdAt && (
-        <span className="case-card-date">
-          <span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}
-        </span>
+        <span className="case-card-date"><span className="date-label">Updated:</span> {formatDateTime(latestTimestamp)}</span>
       )}
+    </div>
+  );
+};
+
+const CaseImages = ({ images }) => {
+  if (!images?.length) return null;
+  return (
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '8px 0 4px', paddingBottom: 4 }}>
+      {images.map((img, i) => (
+        <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
+          onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+          style={{ height: 80, width: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
+      ))}
     </div>
   );
 };
@@ -39,15 +47,9 @@ const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
   if (totalPages <= 1) return null;
   return (
     <div className="pagination-row">
-      <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>
-        ← Prev
-      </button>
-      <span className="pagination-info">
-        Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
-      </span>
-      <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>
-        Next →
-      </button>
+      <button className="pagination-btn" onClick={onPrev} disabled={currentPage === 1}>← Prev</button>
+      <span className="pagination-info">Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong></span>
+      <button className="pagination-btn" onClick={onNext} disabled={currentPage === totalPages}>Next →</button>
     </div>
   );
 };
@@ -58,26 +60,19 @@ export default function ShelterDashboard() {
   const [msg, setMsg] = useState('');
   const [modal, setModal] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
-  const [locationUpdateModal, setLocationUpdateModal] = useState(null); // ← new
+  const [locationUpdateModal, setLocationUpdateModal] = useState(null);
   const [formData, setFormData] = useState({});
   const [view, setView] = useState('dashboard');
   const [page, setPage] = useState(1);
 
   const sortedCases = [...cases].sort((a, b) => {
-    const aTime = a.statusHistory?.length > 0
-      ? new Date(a.statusHistory[a.statusHistory.length - 1].timestamp)
-      : new Date(a.createdAt);
-    const bTime = b.statusHistory?.length > 0
-      ? new Date(b.statusHistory[b.statusHistory.length - 1].timestamp)
-      : new Date(b.createdAt);
+    const aTime = a.statusHistory?.length > 0 ? new Date(a.statusHistory[a.statusHistory.length - 1].timestamp) : new Date(a.createdAt);
+    const bTime = b.statusHistory?.length > 0 ? new Date(b.statusHistory[b.statusHistory.length - 1].timestamp) : new Date(b.createdAt);
     return bTime - aTime;
   });
 
   const totalPages = Math.ceil(sortedCases.length / CASES_PER_PAGE);
-  const pagedCases = sortedCases.slice(
-    (page - 1) * CASES_PER_PAGE,
-    page * CASES_PER_PAGE
-  );
+  const pagedCases = sortedCases.slice((page - 1) * CASES_PER_PAGE, page * CASES_PER_PAGE);
 
   const load = () => {
     setLoading(true);
@@ -86,10 +81,7 @@ export default function ShelterDashboard() {
 
   useEffect(() => { load(); }, []);
 
-  const goToView = (v) => {
-    setView(v);
-    setPage(1);
-  };
+  const goToView = (v) => { setView(v); setPage(1); };
 
   const handle = async (fn, successMsg) => {
     await fn();
@@ -99,12 +91,8 @@ export default function ShelterDashboard() {
     load();
   };
 
-  const openModal = (type, caseId) => {
-    setModal({ type, caseId });
-    setFormData({});
-  };
+  const openModal = (type, caseId) => { setModal({ type, caseId }); setFormData({}); };
 
-  // ── Pin/update shelter location ──
   const handleUpdateLocation = async (location) => {
     try {
       await updateShelterLocation(locationUpdateModal._id, { location });
@@ -123,8 +111,8 @@ export default function ShelterDashboard() {
       onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
   );
 
-  const pendingCases   = sortedCases.filter(c => c.status === 'treatment_done');
-  const atShelter      = sortedCases.filter(c => c.status === 'at_shelter');
+  const pendingCases = sortedCases.filter(c => c.status === 'treatment_done');
+  const atShelter = sortedCases.filter(c => c.status === 'at_shelter');
   const completedCases = sortedCases.filter(c => ['adopted', 'returned_to_owner'].includes(c.status));
 
   const CaseCard = ({ c }) => (
@@ -136,48 +124,31 @@ export default function ShelterDashboard() {
         </div>
         <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
       </div>
-
       <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
       <p className="case-card-desc">{c.description}</p>
+      <CaseImages images={c.images} />
       <p className="case-card-meta">📍 {c.location?.address}</p>
-      {c.reportedBy && (
-        <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>
-      )}
+      {c.reportedBy && <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>}
 
       <div className="case-card-actions">
         {c.status === 'treatment_done' && (
           <>
-            <button className="btn btn-green"
-              onClick={() => handle(() => acceptShelterCase(c._id), 'Case accepted!')}>
-              Accept Case
-            </button>
-            <button className="btn btn-red"
-              onClick={() => handle(() => declineShelterCase(c._id, { reason: 'No capacity' }), 'Case declined')}>
-              Decline
-            </button>
+            <button className="btn btn-green" onClick={() => handle(() => acceptShelterCase(c._id), 'Case accepted!')}>Accept Case</button>
+            <button className="btn btn-red" onClick={() => handle(() => declineShelterCase(c._id, { reason: 'No capacity' }), 'Case declined')}>Decline</button>
           </>
         )}
-
-        {/* ── Pin location after accepting ── */}
         {['shelter_accepted', 'at_shelter'].includes(c.status) && (
           <button className="btn btn-teal" onClick={() => setLocationUpdateModal(c)}>
             📍 {c.shelterLocation?.lat ? 'Update Shelter Location' : 'Pin My Shelter Location'}
           </button>
         )}
         {c.status === 'in_transit_to_shelter' && (
-  <button
-    className="btn btn-teal"
-    onClick={() => handle(() => acceptShelterCase(c._id), 'Animal marked as arrived at shelter!')}
-  >
-    Mark Animal Arrived
-  </button>
-)}
-
-
-        {c.status === 'shelter_accepted' && (
-          <button className="btn btn-teal" onClick={() => openModal('admit', c._id)}>
-            Admit to Shelter
+          <button className="btn btn-teal" onClick={() => handle(() => acceptShelterCase(c._id), 'Animal marked as arrived at shelter!')}>
+            Mark Animal Arrived
           </button>
+        )}
+        {c.status === 'shelter_accepted' && (
+          <button className="btn btn-teal" onClick={() => openModal('admit', c._id)}>Admit to Shelter</button>
         )}
         {c.status === 'at_shelter' && (
           <>
@@ -191,21 +162,12 @@ export default function ShelterDashboard() {
         )}
       </div>
 
-      {/* ── Pinned shelter location display ── */}
       {c.shelterLocation?.lat && (
         <div style={{ marginTop: 10, background: '#f0fdfa', borderRadius: 10, padding: '10px 14px', border: '1px solid #99f6e4' }}>
-          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', marginBottom: 4 }}>
-            📍 Your Pinned Shelter Location
-          </p>
-          <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>
-            {c.shelterLocation.address}
-          </p>
-          <a
-            href={`https://www.openstreetmap.org/?mlat=${c.shelterLocation.lat}&mlon=${c.shelterLocation.lng}#map=17/${c.shelterLocation.lat}/${c.shelterLocation.lng}`}
-            target="_blank" rel="noreferrer"
-            style={{ fontSize: '0.78rem', color: '#0f766e', fontWeight: 700 }}>
-            🗺 View on Map
-          </a>
+          <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', marginBottom: 4 }}>📍 Your Pinned Shelter Location</p>
+          <p style={{ fontSize: '0.82rem', color: '#374151', marginBottom: 6 }}>{c.shelterLocation.address}</p>
+          <a href={`https://www.openstreetmap.org/?mlat=${c.shelterLocation.lat}&mlon=${c.shelterLocation.lng}#map=17/${c.shelterLocation.lat}/${c.shelterLocation.lng}`}
+            target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: '#0f766e', fontWeight: 700 }}>🗺 View on Map</a>
         </div>
       )}
 
@@ -218,76 +180,39 @@ export default function ShelterDashboard() {
           {c.shelterDetails.notes && <p>📝 {c.shelterDetails.notes}</p>}
         </div>
       )}
-{c.medicalRecords?.length > 0 && (
-  <div style={{
-    marginTop: 12,
-    background: '#fff7ed',
-    borderRadius: 12,
-    padding: '12px 16px',
-    border: '1px solid #fed7aa'
-  }}>
-    <p style={{
-      fontWeight: 700,
-      fontSize: '0.78rem',
-      color: '#c2410c',
-      marginBottom: 8,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px'
-    }}>
-      Medical Records ({c.medicalRecords.length})
-    </p>
 
-    {c.medicalRecords.map((m, i) => (
-      <div key={i} style={{ marginBottom: 10 }}>
-        <strong>{m.diagnosis}</strong>
-        <p>Treatment: {m.treatment}</p>
+      {c.medicalRecords?.length > 0 && (
+        <div style={{ marginTop: 12, background: '#fff7ed', borderRadius: 12, padding: '12px 16px', border: '1px solid #fed7aa' }}>
+          <p style={{ fontWeight: 700, fontSize: '0.78rem', color: '#c2410c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Medical Records ({c.medicalRecords.length})
+          </p>
+          {c.medicalRecords.map((m, i) => (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <strong>{m.diagnosis}</strong>
+              <p>Treatment: {m.treatment}</p>
+              {m.medications && <p>Medications: {m.medications}</p>}
+              {m.notes && <p>{m.notes}</p>}
+              {m.documents?.length > 0 && m.documents.map((doc, j) => (
+                <a key={j} href={`${IMAGE_BASE}/uploads/${doc}`} target="_blank" rel="noreferrer"
+                  style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>
+                  📄 Document {j + 1}
+                </a>
+              ))}
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>{formatDateTime(m.createdAt)}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {m.medications && <p>Medications: {m.medications}</p>}
-        {m.notes && <p>{m.notes}</p>}
-
-        {m.documents?.length > 0 && m.documents.map((doc, j) => (
-          <a
-            key={j}
-            href={`http://localhost:5000/uploads/${doc}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              fontSize: '0.78rem',
-              color: '#ea580c',
-              fontWeight: 600,
-              marginRight: 8
-            }}
-          >
-            📄 Document {j + 1}
-          </a>
-        ))}
-
-
-        <p style={{
-          fontSize: '0.75rem',
-          color: '#9ca3af',
-          marginTop: 4
-        }}>
-          {formatDateTime(m.createdAt)}
-        </p>
-      </div>
-    ))}
-  </div>
-)}
-  
       <div className="case-summary-row">
         <div className="case-latest-status">
           <span className="summary-label">Latest:</span>
           <span className="summary-note">
-            {c.statusHistory?.length > 0
-              ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated'
-              : 'No updates yet'}
+            {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
         {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>
-            History ({c.statusHistory.length})
-          </button>
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
         )}
       </div>
     </div>
@@ -297,78 +222,41 @@ export default function ShelterDashboard() {
     <div className="dashboard-page">
       <Navbar />
       <div className="dashboard-container">
-
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Shelter Dashboard</h1>
-            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>
-              Welcome back! Here's your overview.
-            </p>
+            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>Welcome back! Here's your overview.</p>
           </div>
         </div>
 
-        {msg && (
-          <div className="alert-success">
-            {msg}
-            <button className="alert-close" onClick={() => setMsg('')}>✕</button>
-          </div>
-        )}
+        {msg && <div className="alert-success">{msg}<button className="alert-close" onClick={() => setMsg('')}>✕</button></div>}
 
         {view === 'dashboard' && (
           <>
             <div className="dash-stats-row">
-              <div className="dash-stat-box blue">
-                <span className="dash-stat-num">{cases.length}</span>
-                <span className="dash-stat-label">Total Cases</span>
-              </div>
-              <div className="dash-stat-box orange">
-                <span className="dash-stat-num">{pendingCases.length}</span>
-                <span className="dash-stat-label">Pending Accept</span>
-              </div>
-              <div className="dash-stat-box teal">
-                <span className="dash-stat-num">{atShelter.length}</span>
-                <span className="dash-stat-label">At Shelter</span>
-              </div>
-              <div className="dash-stat-box green">
-                <span className="dash-stat-num">{completedCases.length}</span>
-                <span className="dash-stat-label">Completed</span>
-              </div>
+              <div className="dash-stat-box blue"><span className="dash-stat-num">{cases.length}</span><span className="dash-stat-label">Total Cases</span></div>
+              <div className="dash-stat-box orange"><span className="dash-stat-num">{pendingCases.length}</span><span className="dash-stat-label">Pending Accept</span></div>
+              <div className="dash-stat-box teal"><span className="dash-stat-num">{atShelter.length}</span><span className="dash-stat-label">At Shelter</span></div>
+              <div className="dash-stat-box green"><span className="dash-stat-num">{completedCases.length}</span><span className="dash-stat-label">Completed</span></div>
             </div>
-
             <div className="quick-action-grid" style={{ gridTemplateColumns: '1fr' }}>
               <div className="quick-action-card" onClick={() => goToView('all')}>
                 <div className="quick-action-icon" style={{ background: '#f0fdfa' }}>🏠</div>
-                <div className="quick-action-info">
-                  <p className="quick-action-title">All Shelter Cases</p>
-                  <p className="quick-action-sub">{cases.length} cases assigned to your shelter</p>
-                </div>
+                <div className="quick-action-info"><p className="quick-action-title">All Shelter Cases</p><p className="quick-action-sub">{cases.length} cases assigned to your shelter</p></div>
                 <span className="quick-action-arrow">→</span>
               </div>
             </div>
-
             {sortedCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
-                  <div>
-                    <h2 className="section-title">Recent Cases</h2>
-                    <p className="section-subtitle">Showing latest 2 cases</p>
-                  </div>
-                  <button className="view-all-btn" onClick={() => goToView('all')}>
-                    View All ({sortedCases.length})
-                  </button>
+                  <div><h2 className="section-title">Recent Cases</h2><p className="section-subtitle">Showing latest 2 cases</p></div>
+                  <button className="view-all-btn" onClick={() => goToView('all')}>View All ({sortedCases.length})</button>
                 </div>
-                <div className="case-list">
-                  {sortedCases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}
-                </div>
+                <div className="case-list">{sortedCases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}</div>
               </>
             )}
-
             {cases.length === 0 && !loading && (
-              <div className="empty-state">
-                <div className="empty-icon">🏠</div>
-                <h3>No cases yet</h3>
-                <p>Animals assigned to your shelter will appear here.</p>
-              </div>
+              <div className="empty-state"><div className="empty-icon">🏠</div><h3>No cases yet</h3><p>Animals assigned to your shelter will appear here.</p></div>
             )}
           </>
         )}
@@ -379,30 +267,17 @@ export default function ShelterDashboard() {
               <div>
                 <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
                 <h2 className="section-title" style={{ marginTop: 8 }}>All Shelter Cases</h2>
-                <p className="section-subtitle">
-                  {sortedCases.length} cases · Page {page} of {totalPages || 1}
-                </p>
+                <p className="section-subtitle">{sortedCases.length} cases · Page {page} of {totalPages || 1}</p>
               </div>
             </div>
-            {loading ? (
-              <div className="loading">Loading cases...</div>
-            ) : sortedCases.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🏠</div>
-                <h3>No cases yet</h3>
-                <p>Animals assigned to your shelter will appear here.</p>
-              </div>
+            {loading ? <div className="loading">Loading cases...</div> : sortedCases.length === 0 ? (
+              <div className="empty-state"><div className="empty-icon">🏠</div><h3>No cases yet</h3></div>
             ) : (
               <>
-                <div className="case-list">
-                  {pagedCases.map(c => <CaseCard key={c._id} c={c} />)}
-                </div>
-                <Pagination
-                  currentPage={page}
-                  totalPages={totalPages}
+                <div className="case-list">{pagedCases.map(c => <CaseCard key={c._id} c={c} />)}</div>
+                <Pagination currentPage={page} totalPages={totalPages}
                   onPrev={() => setPage(p => Math.max(1, p - 1))}
-                  onNext={() => setPage(p => Math.min(totalPages, p + 1))}
-                />
+                  onNext={() => setPage(p => Math.min(totalPages, p + 1))} />
               </>
             )}
           </>
@@ -412,79 +287,51 @@ export default function ShelterDashboard() {
         {modal && (
           <div className="modal-overlay" onClick={() => setModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              {modal.type === 'admit' && (
-                <>
-                  <h3 className="modal-title">🏠 Admit to Shelter</h3>
-                  <p className="modal-subtitle">Fill in the shelter details for this animal.</p>
-                  <div className="modal-form">
-                    {field('cage_number', 'Cage Number')}
-                    {field('diet', 'Diet / Food type')}
-                    {field('health_status', 'Health Status')}
-                    {field('notes', 'Additional Notes')}
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-teal"
-                      onClick={() => handle(() => markAtShelter(modal.caseId, formData), 'Animal admitted to shelter!')}>
-                      Admit
-                    </button>
-                    <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
-                  </div>
-                </>
-              )}
-              {modal.type === 'care' && (
-                <>
-                  <h3 className="modal-title">✏️ Update Care Details</h3>
-                  <p className="modal-subtitle">Update the care information for this animal.</p>
-                  <div className="modal-form">
-                    {field('diet', 'Diet / Food type')}
-                    {field('health_status', 'Health Status')}
-                    {field('notes', 'Notes')}
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-blue"
-                      onClick={() => handle(() => updateCareDetails(modal.caseId, formData), 'Care details updated!')}>
-                      Update
-                    </button>
-                    <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
-                  </div>
-                </>
-              )}
-              {modal.type === 'adopt' && (
-                <>
-                  <h3 className="modal-title">🎉 Mark as Adopted</h3>
-                  <p className="modal-subtitle">Enter the adopter's details to confirm adoption.</p>
-                  <div className="modal-form">
-                    {field('adopterName', 'Adopter Name *')}
-                    {field('adopterContact', 'Adopter Contact / Phone *')}
-                    {field('notes', 'Notes')}
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-green"
-                      onClick={() => handle(() => markAdopted(modal.caseId, formData), 'Animal adopted! 🎉')}>
-                      Confirm Adoption
-                    </button>
-                    <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
-                  </div>
-                </>
-              )}
-              {modal.type === 'return' && (
-                <>
-                  <h3 className="modal-title">🔄 Return to Owner</h3>
-                  <p className="modal-subtitle">Enter the owner's details to confirm return.</p>
-                  <div className="modal-form">
-                    {field('ownerName', 'Owner Name *')}
-                    {field('ownerContact', 'Owner Contact / Phone')}
-                    {field('notes', 'Notes')}
-                  </div>
-                  <div className="modal-actions">
-                    <button className="btn btn-purple"
-                      onClick={() => handle(() => markReturnedToOwner(modal.caseId, formData), 'Animal returned to owner!')}>
-                      Confirm Return
-                    </button>
-                    <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
-                  </div>
-                </>
-              )}
+              {modal.type === 'admit' && (<>
+                <h3 className="modal-title">🏠 Admit to Shelter</h3>
+                <p className="modal-subtitle">Fill in the shelter details for this animal.</p>
+                <div className="modal-form">
+                  {field('cage_number', 'Cage Number')}{field('diet', 'Diet / Food type')}
+                  {field('health_status', 'Health Status')}{field('notes', 'Additional Notes')}
+                </div>
+                <div className="modal-actions">
+                  <button className="btn btn-teal" onClick={() => handle(() => markAtShelter(modal.caseId, formData), 'Animal admitted to shelter!')}>Admit</button>
+                  <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
+                </div>
+              </>)}
+              {modal.type === 'care' && (<>
+                <h3 className="modal-title">✏️ Update Care Details</h3>
+                <p className="modal-subtitle">Update the care information for this animal.</p>
+                <div className="modal-form">
+                  {field('diet', 'Diet / Food type')}{field('health_status', 'Health Status')}{field('notes', 'Notes')}
+                </div>
+                <div className="modal-actions">
+                  <button className="btn btn-blue" onClick={() => handle(() => updateCareDetails(modal.caseId, formData), 'Care details updated!')}>Update</button>
+                  <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
+                </div>
+              </>)}
+              {modal.type === 'adopt' && (<>
+                <h3 className="modal-title">🎉 Mark as Adopted</h3>
+                <p className="modal-subtitle">Enter the adopter's details to confirm adoption.</p>
+                <div className="modal-form">
+                  {field('adopterName', 'Adopter Name *')}{field('adopterContact', 'Adopter Contact / Phone *')}{field('notes', 'Notes')}
+                </div>
+                <div className="modal-actions">
+                  <button className="btn btn-green" onClick={() => handle(() => markAdopted(modal.caseId, formData), 'Animal adopted! 🎉')}>Confirm Adoption</button>
+                  <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
+                </div>
+              </>)}
+              {modal.type === 'return' && (<>
+                <h3 className="modal-title">🔄 Return to Owner</h3>
+                <p className="modal-subtitle">Enter the owner's details to confirm return.</p>
+                <div className="modal-form">
+                  {field('ownerName', 'Owner Name *')}{field('ownerContact', 'Owner Contact / Phone')}{field('notes', 'Notes')}
+                </div>
+                <div className="modal-actions">
+                  <button className="btn btn-purple" onClick={() => handle(() => markReturnedToOwner(modal.caseId, formData), 'Animal returned to owner!')}>Confirm Return</button>
+                  <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
+                </div>
+              </>)}
             </div>
           </div>
         )}
@@ -502,6 +349,15 @@ export default function ShelterDashboard() {
                 </div>
                 <button className="history-modal-close" onClick={() => setHistoryModal(null)}>✕</button>
               </div>
+              {historyModal.images?.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 8 }}>
+                  {historyModal.images.map((img, i) => (
+                    <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
+                      onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+                      style={{ height: 70, width: 70, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
+                  ))}
+                </div>
+              )}
               <div className="timeline-wrapper">
                 {historyModal.statusHistory.map((h, i) => (
                   <div key={i} className="timeline-row">
@@ -526,7 +382,6 @@ export default function ShelterDashboard() {
           </div>
         )}
 
-        {/* ── Pin/Update Shelter Location Modal ── */}
         {locationUpdateModal && (
           <LocationPickerModal
             title={locationUpdateModal.shelterLocation?.lat ? 'Update Shelter Location' : 'Pin Your Shelter Location'}
@@ -534,7 +389,6 @@ export default function ShelterDashboard() {
             onCancel={() => setLocationUpdateModal(null)}
           />
         )}
-
       </div>
     </div>
   );
