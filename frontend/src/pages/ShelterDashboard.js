@@ -7,7 +7,13 @@ import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
 const CASES_PER_PAGE = 2;
-const IMAGE_BASE = 'http://localhost:5000';
+
+const getImageUrl = (img) => {
+  if (!img) return '';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('uploads/')) return `http://localhost:5000/${img}`;
+  return `http://localhost:5000/uploads/${img}`;
+};
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -35,8 +41,8 @@ const CaseImages = ({ images }) => {
   return (
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '8px 0 4px', paddingBottom: 4 }}>
       {images.map((img, i) => (
-        <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
-          onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+        <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+          onClick={() => window.open(getImageUrl(img), '_blank')}
           style={{ height: 80, width: 80, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
       ))}
     </div>
@@ -96,7 +102,7 @@ export default function ShelterDashboard() {
   const handleUpdateLocation = async (location) => {
     try {
       await updateShelterLocation(locationUpdateModal._id, { location });
-      setMsg('Shelter location pinned! The volunteer can now see your location.');
+      setMsg('Shelter location pinned!');
       setLocationUpdateModal(null);
       load();
     } catch (err) {
@@ -193,10 +199,8 @@ export default function ShelterDashboard() {
               {m.medications && <p>Medications: {m.medications}</p>}
               {m.notes && <p>{m.notes}</p>}
               {m.documents?.length > 0 && m.documents.map((doc, j) => (
-                <a key={j} href={`${IMAGE_BASE}/uploads/${doc}`} target="_blank" rel="noreferrer"
-                  style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>
-                  📄 Document {j + 1}
-                </a>
+                <a key={j} href={getImageUrl(doc)} target="_blank" rel="noreferrer"
+                  style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 600, marginRight: 8 }}>📄 Document {j + 1}</a>
               ))}
               <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>{formatDateTime(m.createdAt)}</p>
             </div>
@@ -211,9 +215,15 @@ export default function ShelterDashboard() {
             {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
-        {c.statusHistory?.length > 0 && (
-          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
-        )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {c.statusHistory?.length > 0 && (
+            <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
+          )}
+          <button className="history-chip" style={{ background: '#eff6ff', color: '#3b82f6', borderColor: '#bfdbfe' }}
+            onClick={() => window.open(`/track/${c.caseId}`, '_blank')}>
+            🔍 Track
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -295,7 +305,7 @@ export default function ShelterDashboard() {
                   {field('health_status', 'Health Status')}{field('notes', 'Additional Notes')}
                 </div>
                 <div className="modal-actions">
-                  <button className="btn btn-teal" onClick={() => handle(() => markAtShelter(modal.caseId, formData), 'Animal admitted to shelter!')}>Admit</button>
+                  <button className="btn btn-teal" onClick={() => handle(() => markAtShelter(modal.caseId, formData), 'Animal admitted!')}>Admit</button>
                   <button className="btn btn-gray" onClick={() => setModal(null)}>Cancel</button>
                 </div>
               </>)}
@@ -352,8 +362,8 @@ export default function ShelterDashboard() {
               {historyModal.images?.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 8 }}>
                   {historyModal.images.map((img, i) => (
-                    <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
-                      onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+                    <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+                      onClick={() => window.open(getImageUrl(img), '_blank')}
                       style={{ height: 70, width: 70, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
                   ))}
                 </div>
