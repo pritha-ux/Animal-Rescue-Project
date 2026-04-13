@@ -42,6 +42,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [cases, setCases] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
+  const [vets, setVets] = useState([]);
+  const [shelters, setShelters] = useState([]);
   const [tab, setTab] = useState('dashboard');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedCase, setSelectedCase] = useState(null);
@@ -55,10 +57,12 @@ export default function AdminDashboard() {
     Promise.all([
       getDashboardStats(), getAllCases(),
       getUsersByRole('volunteer'), getUsersByRole('veterinarian'), getUsersByRole('shelter_staff'),
-    ]).then(([s, c, v]) => {
+    ]).then(([s, c, v, vet, sh]) => {
       setStats(s.data);
       setCases(c.data.cases);
       setVolunteers(v.data);
+      setVets(vet.data);
+      setShelters(sh.data);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -347,6 +351,78 @@ export default function AdminDashboard() {
                           <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>🔒 Closed</span>
                         )}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* STAFF TAB */}
+        {tab === 'staff' && (
+          <>
+            <div className="section-header" style={{ marginTop: 8 }}>
+              <div>
+                <h2 className="section-title">Staff Overview</h2>
+                <p className="section-subtitle">All registered staff members by role</p>
+              </div>
+            </div>
+
+            <h3 className="card-title" style={{ marginTop: 20 }}>🙋 Volunteers ({volunteers.length})</h3>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Name</th><th>Email</th><th>Phone</th></tr>
+                </thead>
+                <tbody>
+                  {volunteers.length === 0 ? (
+                    <tr><td colSpan={3} style={{ textAlign: 'center', color: '#9ca3af' }}>No volunteers registered</td></tr>
+                  ) : volunteers.map(v => (
+                    <tr key={v._id}>
+                      <td>{v.name}</td>
+                      <td>{v.email}</td>
+                      <td>{v.phone || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className="card-title" style={{ marginTop: 24 }}>🩺 Veterinarians ({vets.length})</h3>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Name</th><th>Email</th><th>Phone</th></tr>
+                </thead>
+                <tbody>
+                  {vets.length === 0 ? (
+                    <tr><td colSpan={3} style={{ textAlign: 'center', color: '#9ca3af' }}>No veterinarians registered</td></tr>
+                  ) : vets.map(v => (
+                    <tr key={v._id}>
+                      <td>{v.name}</td>
+                      <td>{v.email}</td>
+                      <td>{v.phone || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className="card-title" style={{ marginTop: 24 }}>🏠 Shelter Staff ({shelters.length})</h3>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Name</th><th>Email</th><th>Phone</th></tr>
+                </thead>
+                <tbody>
+                  {shelters.length === 0 ? (
+                    <tr><td colSpan={3} style={{ textAlign: 'center', color: '#9ca3af' }}>No shelter staff registered</td></tr>
+                  ) : shelters.map(s => (
+                    <tr key={s._id}>
+                      <td>{s.name}</td>
+                      <td>{s.email}</td>
+                      <td>{s.phone || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
