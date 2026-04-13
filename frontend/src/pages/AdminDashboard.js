@@ -9,7 +9,12 @@ import {
 import '../styles/Dashboard.css';
 import '../styles/Modal.css';
 
-const IMAGE_BASE = 'http://localhost:5000/uploads';;
+const getImageUrl = (img) => {
+  if (!img) return '';
+  if (img.startsWith('http')) return img;
+  if (img.startsWith('uploads/')) return `http://localhost:5000/${img}`;
+  return `http://localhost:5000/uploads/${img}`;
+};
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '—';
@@ -58,7 +63,10 @@ export default function AdminDashboard() {
   }, []);
 
   const refreshCases = async () => {
-    const [casesRes, statsRes] = await Promise.all([getAllCases({ status: statusFilter }), getDashboardStats()]);
+    const [casesRes, statsRes] = await Promise.all([
+      getAllCases({ status: statusFilter }),
+      getDashboardStats(),
+    ]);
     setCases(casesRes.data.cases);
     setStats(statsRes.data);
   };
@@ -109,13 +117,16 @@ export default function AdminDashboard() {
         y += 12;
       });
     } else {
-      doc.setFontSize(10); doc.setTextColor(120); doc.text('No history available', 18, y);
+      doc.setFontSize(10); doc.setTextColor(120);
+      doc.text('No history available', 18, y);
     }
-    doc.setFontSize(8); doc.setTextColor(150); doc.text('Animal Rescue System', 14, 287);
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Animal Rescue System', 14, 287);
     doc.save(`${c.caseId}.pdf`);
   };
 
-  const donutData = stats ? Object.entries(stats.statusBreakdown).filter(([, v]) => v > 0)
+  const donutData = stats ? Object.entries(stats.statusBreakdown)
+    .filter(([, v]) => v > 0)
     .map(([key, value]) => ({ name: key.replace(/_/g, ' '), value, color: STATUS_COLORS[key] || '#9ca3af' })) : [];
 
   const lineData = (() => {
@@ -134,7 +145,11 @@ export default function AdminDashboard() {
     { label: 'Adopted', value: stats.statusBreakdown.adopted, cls: 'green' },
   ] : [];
 
-  const noReassignStatuses = ['volunteer_accepted', 'in_transit', 'vet_accepted', 'vet_declined', 'at_vet', 'treatment_done', 'shelter_accepted', 'shelter_declined', 'at_shelter', 'adopted', 'returned_to_owner', 'closed'];
+  const noReassignStatuses = [
+    'volunteer_accepted', 'in_transit', 'vet_accepted', 'vet_declined',
+    'at_vet', 'treatment_done', 'shelter_accepted', 'shelter_declined',
+    'at_shelter', 'adopted', 'returned_to_owner', 'closed',
+  ];
   const completedStatuses = ['adopted', 'returned_to_owner'];
   const closedStatus = ['closed'];
 
@@ -144,14 +159,22 @@ export default function AdminDashboard() {
     <div className="dashboard-page">
       <Navbar />
       <div className="dashboard-container">
+
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-title">Admin Dashboard</h1>
-            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>System overview and case management.</p>
+            <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: 4 }}>
+              System overview and case management.
+            </p>
           </div>
         </div>
 
-        {msg && <div className="alert-success">{msg}<button className="alert-close" onClick={() => setMsg('')}>✕</button></div>}
+        {msg && (
+          <div className="alert-success">
+            {msg}
+            <button className="alert-close" onClick={() => setMsg('')}>✕</button>
+          </div>
+        )}
 
         <div className="tabs">
           {['dashboard', 'cases', 'staff'].map(t => (
@@ -161,6 +184,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
+        {/* DASHBOARD TAB */}
         {tab === 'dashboard' && (
           <>
             <div className="stats-grid">
@@ -171,11 +195,22 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
+
             <div className="mini-stats">
-              <div className="mini-stat blue"><div className="mini-stat-value">{stats.staff.totalVolunteers}</div><div className="mini-stat-label">Volunteers</div></div>
-              <div className="mini-stat orange"><div className="mini-stat-value">{stats.staff.totalVets}</div><div className="mini-stat-label">Veterinarians</div></div>
-              <div className="mini-stat teal"><div className="mini-stat-value">{stats.staff.totalShelterStaff}</div><div className="mini-stat-label">Shelter Staff</div></div>
+              <div className="mini-stat blue">
+                <div className="mini-stat-value">{stats.staff.totalVolunteers}</div>
+                <div className="mini-stat-label">Volunteers</div>
+              </div>
+              <div className="mini-stat orange">
+                <div className="mini-stat-value">{stats.staff.totalVets}</div>
+                <div className="mini-stat-label">Veterinarians</div>
+              </div>
+              <div className="mini-stat teal">
+                <div className="mini-stat-value">{stats.staff.totalShelterStaff}</div>
+                <div className="mini-stat-label">Shelter Staff</div>
+              </div>
             </div>
+
             <div className="charts-row">
               <div className="chart-card">
                 <p className="chart-title">Cases by Status</p>
@@ -185,7 +220,8 @@ export default function AdminDashboard() {
                       <Pie data={donutData} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value">
                         {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(value, name) => [value, name]} contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }} />
+                      <Tooltip formatter={(value, name) => [value, name]}
+                        contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }} />
                       <Legend iconType="circle" iconSize={8} formatter={(value) => (
                         <span style={{ fontSize: '0.75rem', color: '#374151', textTransform: 'capitalize' }}>{value}</span>
                       )} />
@@ -193,6 +229,7 @@ export default function AdminDashboard() {
                   </ResponsiveContainer>
                 ) : <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>No data yet</div>}
               </div>
+
               <div className="chart-card">
                 <p className="chart-title">Cases Over Time</p>
                 {lineData.length > 1 ? (
@@ -201,17 +238,25 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                       <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                       <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
-                      <Tooltip contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }} formatter={(v) => [v, 'Cases']} />
-                      <Line type="monotone" dataKey="count" stroke="#ea580c" strokeWidth={2.5} dot={{ fill: '#ea580c', r: 4 }} activeDot={{ r: 6 }} />
+                      <Tooltip contentStyle={{ borderRadius: 10, fontSize: '0.82rem', border: '1px solid #f3f4f6' }}
+                        formatter={(v) => [v, 'Cases']} />
+                      <Line type="monotone" dataKey="count" stroke="#ea580c" strokeWidth={2.5}
+                        dot={{ fill: '#ea580c', r: 4 }} activeDot={{ r: 6 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>Not enough data yet</div>}
               </div>
             </div>
+
             <h3 className="card-title" style={{ marginTop: 24 }}>Recent Cases</h3>
             <div className="table-wrapper">
               <table className="data-table">
-                <thead><tr><th>Case ID</th><th>Animal</th><th>Location</th><th>Status</th><th>Reported By</th><th>Date & Time</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Case ID</th><th>Animal</th><th>Location</th>
+                    <th>Status</th><th>Reported By</th><th>Date & Time</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {stats.recentCases.map(c => (
                     <tr key={c._id}>
@@ -219,8 +264,8 @@ export default function AdminDashboard() {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {c.images?.[0] && (
-                            <img src={`${IMAGE_BASE}/${c.images[0]}`} alt="animal"
-                              onClick={() => window.open(`${IMAGE_BASE}/${c.images[0]}`, '_blank')}
+                            <img src={getImageUrl(c.images[0])} alt="animal"
+                              onClick={() => window.open(getImageUrl(c.images[0]), '_blank')}
                               style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0, border: '1px solid #e5e7eb' }} />
                           )}
                           <span>{c.animalName} ({c.animalType})</span>
@@ -238,19 +283,32 @@ export default function AdminDashboard() {
           </>
         )}
 
+        {/* CASES TAB */}
         {tab === 'cases' && (
           <>
             <div className="filter-row">
               <select className="filter-select" value={statusFilter}
-                onChange={e => { setStatusFilter(e.target.value); getAllCases({ status: e.target.value }).then(r => setCases(r.data.cases)); }}>
+                onChange={e => {
+                  setStatusFilter(e.target.value);
+                  getAllCases({ status: e.target.value }).then(r => setCases(r.data.cases));
+                }}>
                 <option value="">All Status</option>
-                {['reported', 'assigned', 'volunteer_accepted', 'volunteer_declined', 'in_transit', 'vet_accepted', 'vet_declined', 'at_vet', 'treatment_done', 'shelter_accepted', 'shelter_declined', 'at_shelter', 'adopted', 'returned_to_owner', 'closed']
-                  .map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+                {[
+                  'reported', 'assigned', 'volunteer_accepted', 'volunteer_declined',
+                  'in_transit', 'vet_accepted', 'vet_declined', 'at_vet', 'treatment_done',
+                  'shelter_accepted', 'shelter_declined', 'at_shelter',
+                  'adopted', 'returned_to_owner', 'closed',
+                ].map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
               </select>
             </div>
             <div className="table-wrapper">
               <table className="data-table">
-                <thead><tr><th>Case ID</th><th>Animal</th><th>Location</th><th>Status</th><th>Volunteer</th><th>Reported At</th><th>Actions</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Case ID</th><th>Animal</th><th>Location</th>
+                    <th>Status</th><th>Volunteer</th><th>Reported At</th><th>Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {cases.map(c => (
                     <tr key={c._id}>
@@ -258,8 +316,8 @@ export default function AdminDashboard() {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {c.images?.[0] && (
-                            <img src={`${IMAGE_BASE}/${c.images[0]}`} alt="animal"
-                              onClick={() => window.open(`${IMAGE_BASE}/${c.images[0]}`, '_blank')}
+                            <img src={getImageUrl(c.images[0])} alt="animal"
+                              onClick={() => window.open(getImageUrl(c.images[0]), '_blank')}
                               style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, cursor: 'pointer', flexShrink: 0, border: '1px solid #e5e7eb' }} />
                           )}
                           <span>{c.animalName} ({c.animalType})</span>
@@ -273,14 +331,21 @@ export default function AdminDashboard() {
                         <button className="action-link blue" onClick={() => setHistoryModal(c)}>History</button>
                         <button className="action-link" style={{ marginLeft: 8, color: '#ea580c' }} onClick={() => generatePDF(c)}>PDF</button>
                         {!noReassignStatuses.includes(c.status) && (
-                          <button className="action-link blue" style={{ marginLeft: 8 }} onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>Assign</button>
+                          <button className="action-link blue" style={{ marginLeft: 8 }}
+                            onClick={() => { setSelectedCase(c); setSelectedVol(''); }}>Assign</button>
                         )}
                         {![...completedStatuses, ...closedStatus].includes(c.status) && (
                           <button className="action-link red" style={{ marginLeft: 8 }}
-                            onClick={async () => { await closeCase(c._id, { note: 'Closed by admin' }); setMsg('Case closed!'); await refreshCases(); }}>Close</button>
+                            onClick={async () => { await closeCase(c._id, { note: 'Closed by admin' }); setMsg('Case closed!'); await refreshCases(); }}>
+                            Close
+                          </button>
                         )}
-                        {completedStatuses.includes(c.status) && <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>✅ Completed</span>}
-                        {closedStatus.includes(c.status) && <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>🔒 Closed</span>}
+                        {completedStatuses.includes(c.status) && (
+                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>✅ Completed</span>
+                        )}
+                        {closedStatus.includes(c.status) && (
+                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>🔒 Closed</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -301,7 +366,9 @@ export default function AdminDashboard() {
                 <div className="modal-assign-row">
                   <select value={selectedVol} onChange={e => setSelectedVol(e.target.value)}>
                     <option value="">Choose a volunteer...</option>
-                    {volunteers.map(v => <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>)}
+                    {volunteers.map(v => (
+                      <option key={v._id} value={v._id}>{v.name} — {v.phone || v.email}</option>
+                    ))}
                   </select>
                   <button className="btn btn-orange" onClick={doAssignVolunteer} disabled={assigning}>
                     {assigning ? 'Assigning...' : 'Assign'}
@@ -331,28 +398,32 @@ export default function AdminDashboard() {
               {historyModal.images?.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px 0', borderBottom: '1px solid #f3f4f6', marginBottom: 8 }}>
                   {historyModal.images.map((img, i) => (
-                    <img key={i} src={`${IMAGE_BASE}/${img}`} alt={`animal-${i}`}
-                      onClick={() => window.open(`${IMAGE_BASE}/${img}`, '_blank')}
+                    <img key={i} src={getImageUrl(img)} alt={`animal-${i}`}
+                      onClick={() => window.open(getImageUrl(img), '_blank')}
                       style={{ height: 70, width: 70, objectFit: 'cover', borderRadius: 8, flexShrink: 0, cursor: 'pointer', border: '2px solid #e5e7eb' }} />
                   ))}
                 </div>
               )}
               <div className="timeline-wrapper">
-                {historyModal.statusHistory?.length > 0 ? historyModal.statusHistory.map((h, i) => (
-                  <div key={i} className="timeline-row">
-                    <div className="timeline-left">
-                      <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
-                      {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
-                    </div>
-                    <div className="timeline-body">
-                      <div className="timeline-top">
-                        <StatusBadge status={h.status} />
-                        <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
+                {historyModal.statusHistory?.length > 0 ? (
+                  historyModal.statusHistory.map((h, i) => (
+                    <div key={i} className="timeline-row">
+                      <div className="timeline-left">
+                        <div className={`timeline-dot ${i === historyModal.statusHistory.length - 1 ? 'active' : ''}`} />
+                        {i < historyModal.statusHistory.length - 1 && <div className="timeline-line" />}
                       </div>
-                      {h.note && <p className="timeline-note">{h.note}</p>}
+                      <div className="timeline-body">
+                        <div className="timeline-top">
+                          <StatusBadge status={h.status} />
+                          <span className="timeline-time">{formatDateTime(h.timestamp)}</span>
+                        </div>
+                        {h.note && <p className="timeline-note">{h.note}</p>}
+                      </div>
                     </div>
-                  </div>
-                )) : <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>No history available.</p>}
+                  ))
+                ) : (
+                  <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>No history available.</p>
+                )}
               </div>
               <div className="modal-actions">
                 <button className="btn btn-gray" onClick={() => setHistoryModal(null)}>Close</button>
@@ -360,6 +431,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
