@@ -16,11 +16,9 @@ const dashRoutes = {
   veterinarian: '/vet', shelter_staff: '/shelter'
 };
 
-const needsAddress = ['veterinarian', 'shelter_staff'];
-
 export default function Register() {
   const [form, setForm] = useState({
-    name: '', email: '', password: '', phone: '', role: 'public', address: ''
+    name: '', email: '', password: '', phone: '', role: 'public'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -81,36 +79,13 @@ export default function Register() {
               {roles.map(r => (
                 <div key={r.value}
                   className={`role-option ${form.role === r.value ? 'selected' : ''}`}
-                  onClick={() => setForm({ ...form, role: r.value, address: '' })}>
+                  onClick={() => setForm({ ...form, role: r.value })}>
                   <span className="role-icon">{r.icon}</span>
                   <span className="role-label">{r.label}</span>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Address — only for vet and shelter */}
-          {needsAddress.includes(form.role) && (
-            <div className="form-group">
-              <label>
-                {form.role === 'veterinarian' ? '🏥 Clinic Address' : '🏠 Shelter Address'}
-              </label>
-              <input
-                type="text"
-                required
-                placeholder={
-                  form.role === 'veterinarian'
-                    ? 'e.g. Veterinary Clinic, Baneshwor, Kathmandu'
-                    : 'e.g. Animal Shelter, Lalitpur, Kathmandu'
-                }
-                value={form.address}
-                onChange={e => setForm({ ...form, address: e.target.value })}
-              />
-              <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>
-                This address will be shared with volunteers for navigation
-              </p>
-            </div>
-          )}
 
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? 'Creating account...' : 'Create Account'}
