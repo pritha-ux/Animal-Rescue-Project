@@ -872,3 +872,20 @@
 .data-table th:last-child {
   text-align: center;
 }
+.staff-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.staff-table th:nth-child(1),
+.staff-table td:nth-child(1) { width: 30%; }
+
+.staff-table th:nth-child(2),
+.staff-table td:nth-child(2) { width: 40%; }
+
+.staff-table th:nth-child(3),
+.staff-table td:nth-child(3) { 
+  width: 30%; 
+  white-space: normal;
+  text-align: left;
+}

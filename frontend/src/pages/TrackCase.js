@@ -216,9 +216,14 @@ export default function TrackCase() {
         )}
 
         <div className="track-back">
-          <button onClick={() => navigate(-1)}>← Back</button>
-        </div>
-
+  <button onClick={() => {
+    if (window.opener) {
+      window.close();
+    } else {
+      navigate(-1);
+    }
+  }}>← Back</button>
+</div>
         {/* ── Full History Modal ── */}
         {showHistory && caseData && (
           <div className="modal-overlay" onClick={() => setShowHistory(false)}>

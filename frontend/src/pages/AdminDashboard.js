@@ -345,10 +345,10 @@ export default function AdminDashboard() {
                           </button>
                         )}
                         {completedStatuses.includes(c.status) && (
-                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>✅ Completed</span>
+                          <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}> Completed</span>
                         )}
                         {closedStatus.includes(c.status) && (
-                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}>🔒 Closed</span>
+                          <span style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.82rem', marginLeft: 8 }}> Closed</span>
                         )}
                       </td>
                     </tr>

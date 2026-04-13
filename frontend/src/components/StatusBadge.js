@@ -8,7 +8,7 @@ const labels = {
   in_transit: 'In Transit',
   at_vet: 'At Veterinarian',
   at_shelter: 'At Shelter',
-  adopted: 'Adopted 🎉',
+  adopted: 'Adopted ',
   returned_to_owner: 'Returned to Owner',
   closed: 'Closed',
 };
