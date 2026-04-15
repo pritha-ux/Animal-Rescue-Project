@@ -29,6 +29,19 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!/^[a-zA-Z\s]{3,}$/.test(form.name.trim())) {
+      setError('Full name must be at least 3 characters and contain letters only.');
+      setLoading(false);
+      return;
+    }
+
+    if (form.phone && !/^9\d{9}$/.test(form.phone)) {
+      setError('Phone number must be 10 digits and start with 9.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await register(form);
       loginUser(res.data.token, res.data);

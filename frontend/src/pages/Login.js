@@ -33,7 +33,7 @@ export default function Login() {
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-icon">🐾</div>
-          <h1>Animal Rescue System</h1>
+          <h1>Animal Rescue and Volunteer Coordination System</h1>
           <p>Sign in to your account</p>
         </div>
 
