@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer"; // ✅ ADD THIS
 import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
@@ -12,6 +13,7 @@ import notificationRoutes from "./routes/NotificationRoutes.js";
 import adminRoutes from "./routes/AdminRoutes.js";
 import vetRoutes from "./routes/vetRoutes.js";
 import shelterRoutes from "./routes/ShelterRoutes.js";
+
 dotenv.config();
 connectDB();
 
@@ -33,6 +35,14 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/vet", vetRoutes);
 app.use('/api/shelter', shelterRoutes);
+
+// ✅ ADD THIS — must be after all routes
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError || err.message?.includes('Invalid file type')) {
+    return res.status(400).json({ message: err.message });
+  }
+  next(err);
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
