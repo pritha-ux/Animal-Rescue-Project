@@ -25,3 +25,8 @@
 .badge-vet_declined      { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 .badge-shelter_accepted  { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
 .badge-shelter_declined  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-in_transit_to_shelter {
+  background: #faf5ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
