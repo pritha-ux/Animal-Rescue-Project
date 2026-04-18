@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase, updateShelterLocation } from '../api';
+import { getShelterCases, markAtShelter, updateCareDetails, markAdopted, markReturnedToOwner, acceptShelterCase, declineShelterCase, updateShelterLocation, getMyCases } from '../api';
 import Navbar from '../components/Navbar';
 import StatusBadge from '../components/StatusBadge';
 import LocationPickerModal from '../components/LocationPickerModal';
@@ -62,6 +62,7 @@ const Pagination = ({ currentPage, totalPages, onPrev, onNext }) => {
 
 export default function ShelterDashboard() {
   const [cases, setCases] = useState([]);
+  const [myCases, setMyCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [modal, setModal] = useState(null);
@@ -69,7 +70,8 @@ export default function ShelterDashboard() {
   const [locationUpdateModal, setLocationUpdateModal] = useState(null);
   const [formData, setFormData] = useState({});
   const [view, setView] = useState('dashboard');
-  const [page, setPage] = useState(1);
+  const [assignedPage, setAssignedPage] = useState(1);
+  const [reportedPage, setReportedPage] = useState(1);
 
   const sortedCases = [...cases].sort((a, b) => {
     const aTime = a.statusHistory?.length > 0 ? new Date(a.statusHistory[a.statusHistory.length - 1].timestamp) : new Date(a.createdAt);
@@ -77,17 +79,27 @@ export default function ShelterDashboard() {
     return bTime - aTime;
   });
 
-  const totalPages = Math.ceil(sortedCases.length / CASES_PER_PAGE);
-  const pagedCases = sortedCases.slice((page - 1) * CASES_PER_PAGE, page * CASES_PER_PAGE);
+  const assignedTotalPages = Math.ceil(sortedCases.length / CASES_PER_PAGE);
+  const reportedTotalPages = Math.ceil(myCases.length / CASES_PER_PAGE);
+  const pagedAssigned = sortedCases.slice((assignedPage - 1) * CASES_PER_PAGE, assignedPage * CASES_PER_PAGE);
+  const pagedReported = myCases.slice((reportedPage - 1) * CASES_PER_PAGE, reportedPage * CASES_PER_PAGE);
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    getShelterCases().then(r => setCases(r.data)).finally(() => setLoading(false));
+    try {
+      const [shelterRes, myRes] = await Promise.all([getShelterCases(), getMyCases()]);
+      setCases(shelterRes.data);
+      setMyCases(myRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
 
-  const goToView = (v) => { setView(v); setPage(1); };
+  const goToView = (v) => { setView(v); setAssignedPage(1); setReportedPage(1); };
 
   const handle = async (fn, successMsg) => {
     await fn();
@@ -215,6 +227,34 @@ export default function ShelterDashboard() {
             {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
           </span>
         </div>
+        {c.statusHistory?.length > 0 && (
+          <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Reported card — same as volunteer's ReportedCard with track button
+  const ReportedCard = ({ c }) => (
+    <div className="case-card" style={{ borderLeftColor: '#0f766e' }}>
+      <div className="case-card-header">
+        <div className="case-card-id-row">
+          <span className="case-id">{c.caseId}</span>
+          <StatusBadge status={c.status} />
+        </div>
+        <CardTimestamps createdAt={c.createdAt} statusHistory={c.statusHistory} />
+      </div>
+      <p className="case-card-title">{c.animalName || 'Unknown'} ({c.animalType})</p>
+      <p className="case-card-desc">{c.description}</p>
+      <CaseImages images={c.images} />
+      <p className="case-card-meta">📍 {c.location?.address}</p>
+      <div className="case-summary-row">
+        <div className="case-latest-status">
+          <span className="summary-label">Latest:</span>
+          <span className="summary-note">
+            {c.statusHistory?.length > 0 ? c.statusHistory[c.statusHistory.length - 1].note || 'Status updated' : 'No updates yet'}
+          </span>
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {c.statusHistory?.length > 0 && (
             <button className="history-chip" onClick={() => setHistoryModal(c)}>History ({c.statusHistory.length})</button>
@@ -241,59 +281,100 @@ export default function ShelterDashboard() {
 
         {msg && <div className="alert-success">{msg}<button className="alert-close" onClick={() => setMsg('')}>✕</button></div>}
 
+        {/* ── DASHBOARD VIEW ── */}
         {view === 'dashboard' && (
           <>
             <div className="dash-stats-row">
               <div className="dash-stat-box blue"><span className="dash-stat-num">{cases.length}</span><span className="dash-stat-label">Total Cases</span></div>
               <div className="dash-stat-box orange"><span className="dash-stat-num">{pendingCases.length}</span><span className="dash-stat-label">Pending Accept</span></div>
               <div className="dash-stat-box teal"><span className="dash-stat-num">{atShelter.length}</span><span className="dash-stat-label">At Shelter</span></div>
-              <div className="dash-stat-box green"><span className="dash-stat-num">{completedCases.length}</span><span className="dash-stat-label">Completed</span></div>
+              <div className="dash-stat-box green"><span className="dash-stat-num">{myCases.length}</span><span className="dash-stat-label">I Reported</span></div>
             </div>
-            <div className="quick-action-grid" style={{ gridTemplateColumns: '1fr' }}>
-              <div className="quick-action-card" onClick={() => goToView('all')}>
+
+            <div className="quick-action-grid">
+              <div className="quick-action-card" onClick={() => goToView('assigned')}>
                 <div className="quick-action-icon" style={{ background: '#f0fdfa' }}>🏠</div>
-                <div className="quick-action-info"><p className="quick-action-title">All Shelter Cases</p><p className="quick-action-sub">{cases.length} cases assigned to your shelter</p></div>
+                <div className="quick-action-info"><p className="quick-action-title">Assigned Cases</p><p className="quick-action-sub">{cases.length} cases assigned to your shelter</p></div>
+                <span className="quick-action-arrow">→</span>
+              </div>
+              <div className="quick-action-card" onClick={() => goToView('reported')}>
+                <div className="quick-action-icon" style={{ background: '#faf5ff' }}>🐾</div>
+                <div className="quick-action-info"><p className="quick-action-title">Cases I Reported</p><p className="quick-action-sub">{myCases.length} cases you reported</p></div>
                 <span className="quick-action-arrow">→</span>
               </div>
             </div>
+
             {sortedCases.length > 0 && (
               <>
                 <div className="section-header" style={{ marginTop: 28 }}>
-                  <div><h2 className="section-title">Recent Cases</h2><p className="section-subtitle">Showing latest 2 cases</p></div>
-                  <button className="view-all-btn" onClick={() => goToView('all')}>View All ({sortedCases.length})</button>
+                  <div><h2 className="section-title">Recent Assigned Cases</h2><p className="section-subtitle">Showing latest 2 cases</p></div>
+                  <button className="view-all-btn" onClick={() => goToView('assigned')}>View All ({sortedCases.length})</button>
                 </div>
                 <div className="case-list">{sortedCases.slice(0, 2).map(c => <CaseCard key={c._id} c={c} />)}</div>
               </>
             )}
-            {cases.length === 0 && !loading && (
-              <div className="empty-state"><div className="empty-icon">🏠</div><h3>No cases yet</h3><p>Animals assigned to your shelter will appear here.</p></div>
+            {myCases.length > 0 && (
+              <>
+                <div className="section-header" style={{ marginTop: 28 }}>
+                  <div><h2 className="section-title">Recently Reported by Me</h2><p className="section-subtitle">Showing latest 2 cases</p></div>
+                  <button className="view-all-btn" onClick={() => goToView('reported')}>View All ({myCases.length})</button>
+                </div>
+                <div className="case-list">{myCases.slice(0, 2).map(c => <ReportedCard key={c._id} c={c} />)}</div>
+              </>
+            )}
+            {cases.length === 0 && myCases.length === 0 && !loading && (
+              <div className="empty-state"><div className="empty-icon">🏠</div><h3>No activity yet</h3><p>Cases assigned to your shelter will appear here.</p></div>
             )}
           </>
         )}
 
-        {view === 'all' && (
+        {/* ── ASSIGNED CASES VIEW ── */}
+        {view === 'assigned' && (
           <>
             <div className="section-header">
               <div>
                 <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
-                <h2 className="section-title" style={{ marginTop: 8 }}>All Shelter Cases</h2>
-                <p className="section-subtitle">{sortedCases.length} cases · Page {page} of {totalPages || 1}</p>
+                <h2 className="section-title" style={{ marginTop: 8 }}>All Assigned Cases</h2>
+                <p className="section-subtitle">{sortedCases.length} cases · Page {assignedPage} of {assignedTotalPages || 1}</p>
               </div>
             </div>
             {loading ? <div className="loading">Loading cases...</div> : sortedCases.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon">🏠</div><h3>No cases yet</h3></div>
+              <div className="empty-state"><div className="empty-icon">🏠</div><h3>No assigned cases</h3><p>Animals assigned to your shelter will appear here.</p></div>
             ) : (
               <>
-                <div className="case-list">{pagedCases.map(c => <CaseCard key={c._id} c={c} />)}</div>
-                <Pagination currentPage={page} totalPages={totalPages}
-                  onPrev={() => setPage(p => Math.max(1, p - 1))}
-                  onNext={() => setPage(p => Math.min(totalPages, p + 1))} />
+                <div className="case-list">{pagedAssigned.map(c => <CaseCard key={c._id} c={c} />)}</div>
+                <Pagination currentPage={assignedPage} totalPages={assignedTotalPages}
+                  onPrev={() => setAssignedPage(p => Math.max(1, p - 1))}
+                  onNext={() => setAssignedPage(p => Math.min(assignedTotalPages, p + 1))} />
               </>
             )}
           </>
         )}
 
-        {/* Modals */}
+        {/* ── REPORTED CASES VIEW ── */}
+        {view === 'reported' && (
+          <>
+            <div className="section-header">
+              <div>
+                <button className="back-btn" onClick={() => goToView('dashboard')}>← Back</button>
+                <h2 className="section-title" style={{ marginTop: 8 }}>Cases I Reported</h2>
+                <p className="section-subtitle">{myCases.length} cases · Page {reportedPage} of {reportedTotalPages || 1}</p>
+              </div>
+            </div>
+            {loading ? <div className="loading">Loading...</div> : myCases.length === 0 ? (
+              <div className="empty-state"><div className="empty-icon">🐾</div><h3>No reported cases</h3><p>Cases you report will appear here.</p></div>
+            ) : (
+              <>
+                <div className="case-list">{pagedReported.map(c => <ReportedCard key={c._id} c={c} />)}</div>
+                <Pagination currentPage={reportedPage} totalPages={reportedTotalPages}
+                  onPrev={() => setReportedPage(p => Math.max(1, p - 1))}
+                  onNext={() => setReportedPage(p => Math.min(reportedTotalPages, p + 1))} />
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── MODALS ── */}
         {modal && (
           <div className="modal-overlay" onClick={() => setModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
