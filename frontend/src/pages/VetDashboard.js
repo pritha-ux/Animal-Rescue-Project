@@ -144,7 +144,7 @@ export default function VetDashboard() {
     load();
   };
 
-  const pendingCases = sortedCases.filter(c => ['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status));
+  const pendingCases = sortedCases.filter(c => ['in_transit', 'volunteer_accepted', 'assigned', 'vet_declined'].includes(c.status));
   const activeCases = sortedCases.filter(c => ['vet_accepted', 'at_vet'].includes(c.status));
 
   const CaseCard = ({ c }) => (
@@ -163,7 +163,8 @@ export default function VetDashboard() {
       {c.reportedBy && <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>}
 
       <div className="case-card-actions">
-        {['in_transit', 'volunteer_accepted', 'assigned'].includes(c.status) && (
+        {/* ✅ FIX: Added 'vet_declined' so new vet can see Accept/Decline buttons */}
+        {['in_transit', 'volunteer_accepted', 'assigned', 'vet_declined'].includes(c.status) && (
           <>
             <button className="btn btn-green" onClick={() => handleVetAccept(c._id)}>Accept Case</button>
             <button className="btn btn-red" onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined')}>Decline</button>
