@@ -129,9 +129,8 @@ export default function ShelterDashboard() {
       onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
   );
 
-  const pendingCases = sortedCases.filter(c => c.status === 'treatment_done');
+  const pendingCases = sortedCases.filter(c => ['treatment_done', 'shelter_declined'].includes(c.status));
   const atShelter = sortedCases.filter(c => c.status === 'at_shelter');
-  const completedCases = sortedCases.filter(c => ['adopted', 'returned_to_owner'].includes(c.status));
 
   const CaseCard = ({ c }) => (
     <div className="case-card">
@@ -149,7 +148,7 @@ export default function ShelterDashboard() {
       {c.reportedBy && <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>}
 
       <div className="case-card-actions">
-        {c.status === 'treatment_done' && (
+        {(c.status === 'treatment_done' || c.status === 'shelter_declined') && (
           <>
             <button className="btn btn-green" onClick={() => handle(() => acceptShelterCase(c._id), 'Case accepted!')}>Accept Case</button>
             <button className="btn btn-red" onClick={() => handle(() => declineShelterCase(c._id, { reason: 'No capacity' }), 'Case declined')}>Decline</button>
@@ -234,7 +233,6 @@ export default function ShelterDashboard() {
     </div>
   );
 
-  // Reported card — same as volunteer's ReportedCard with track button
   const ReportedCard = ({ c }) => (
     <div className="case-card" style={{ borderLeftColor: '#0f766e' }}>
       <div className="case-card-header">
@@ -281,7 +279,6 @@ export default function ShelterDashboard() {
 
         {msg && <div className="alert-success">{msg}<button className="alert-close" onClick={() => setMsg('')}>✕</button></div>}
 
-        {/* ── DASHBOARD VIEW ── */}
         {view === 'dashboard' && (
           <>
             <div className="dash-stats-row">
@@ -328,7 +325,6 @@ export default function ShelterDashboard() {
           </>
         )}
 
-        {/* ── ASSIGNED CASES VIEW ── */}
         {view === 'assigned' && (
           <>
             <div className="section-header">
@@ -351,7 +347,6 @@ export default function ShelterDashboard() {
           </>
         )}
 
-        {/* ── REPORTED CASES VIEW ── */}
         {view === 'reported' && (
           <>
             <div className="section-header">
@@ -374,7 +369,6 @@ export default function ShelterDashboard() {
           </>
         )}
 
-        {/* ── MODALS ── */}
         {modal && (
           <div className="modal-overlay" onClick={() => setModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
@@ -427,7 +421,6 @@ export default function ShelterDashboard() {
           </div>
         )}
 
-        {/* History Modal */}
         {historyModal && (
           <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
             <div className="modal history-modal" onClick={e => e.stopPropagation()}>
