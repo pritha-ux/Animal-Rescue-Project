@@ -144,8 +144,8 @@ export default function VetDashboard() {
     load();
   };
 
-  const pendingCases = sortedCases.filter(c => ['in_transit', 'volunteer_accepted', 'assigned', 'vet_declined'].includes(c.status));
-  const activeCases = sortedCases.filter(c => ['vet_accepted', 'at_vet'].includes(c.status));
+  const pendingCases = sortedCases.filter(c => ['volunteer_accepted', 'assigned', 'vet_declined'].includes(c.status));
+  const activeCases = sortedCases.filter(c => ['vet_accepted', 'at_vet', 'in_transit'].includes(c.status));
 
   const CaseCard = ({ c }) => (
     <div className="case-card">
@@ -163,27 +163,37 @@ export default function VetDashboard() {
       {c.reportedBy && <p className="case-card-meta">👤 {c.reportedBy.name} • {c.reportedBy.phone}</p>}
 
       <div className="case-card-actions">
-        {/* ✅ FIX: Added 'vet_declined' so new vet can see Accept/Decline buttons */}
-        {['in_transit', 'volunteer_accepted', 'assigned', 'vet_declined'].includes(c.status) && (
+
+        {/* Accept/Decline — only before vet accepts */}
+        {['volunteer_accepted', 'assigned', 'vet_declined'].includes(c.status) && (
           <>
             <button className="btn btn-green" onClick={() => handleVetAccept(c._id)}>Accept Case</button>
             <button className="btn btn-red" onClick={() => handle(() => declineVetCase(c._id, { reason: 'Unavailable' }), 'Case declined')}>Decline</button>
           </>
         )}
-        {['vet_accepted', 'at_vet'].includes(c.status) && (
+
+        {/* Pin/Update Clinic Location — includes in_transit */}
+        {['vet_accepted', 'at_vet', 'in_transit'].includes(c.status) && (
           <button className="btn btn-green" onClick={() => setLocationUpdateModal(c)}>
             📍 {c.vetLocation?.lat ? 'Update Clinic Location' : 'Pin My Clinic Location'}
           </button>
         )}
-        {c.status === 'vet_accepted' && (
+
+        {/* Mark Animal Arrived — includes in_transit */}
+        {(c.status === 'vet_accepted' || c.status === 'in_transit') && (
           <button className="btn btn-orange" onClick={() => handle(() => markAtVet(c._id), 'Animal marked arrived!')}>Mark Animal Arrived</button>
         )}
-        {['vet_accepted', 'at_vet'].includes(c.status) && (
+
+        {/* Add Medical Record — includes in_transit */}
+        {['vet_accepted', 'at_vet', 'in_transit'].includes(c.status) && (
           <button className="btn btn-blue" onClick={() => { setMedModal(c._id); setMedFiles([]); }}>Add Medical Record</button>
         )}
+
+        {/* Treatment Complete — only at_vet */}
         {c.status === 'at_vet' && (
           <button className="btn btn-green" onClick={() => handle(() => markTreatmentDone(c._id), 'Treatment complete!')}>Treatment Complete</button>
         )}
+
       </div>
 
       {c.vetLocation?.lat && (
@@ -364,7 +374,6 @@ export default function VetDashboard() {
           </>
         )}
 
-        {/* Medical Record Modal */}
         {medModal && (
           <div className="modal-overlay" onClick={() => setMedModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
@@ -407,7 +416,6 @@ export default function VetDashboard() {
           </div>
         )}
 
-        {/* History Modal */}
         {historyModal && (
           <div className="modal-overlay" onClick={() => setHistoryModal(null)}>
             <div className="modal history-modal" onClick={e => e.stopPropagation()}>
